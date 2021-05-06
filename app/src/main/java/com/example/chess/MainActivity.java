@@ -146,7 +146,7 @@ public class MainActivity extends AppCompatActivity {
 
             boolean isPromotion = (this.currentBoard.getPieceOnTile(this.currentBoard.getCurrentStartSquare()) instanceof Pawn && (this.currentBoard.isWhiteToMove() ? (tileNum < 8) : (tileNum > 55)));
 
-            Move move = this.currentBoard.createMove(this.currentBoard.getCurrentStartSquare(), tileNum, isPromotion ? 0 : -1);
+            Move move = this.currentBoard.createMove(this.currentBoard.getCurrentStartSquare(), tileNum, isPromotion ? 0 : 0);
             this.currentBoard.makeMove(move);
             Search searcher = new Search(this.currentBoard);
             long startTime = System.currentTimeMillis();

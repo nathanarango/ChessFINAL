@@ -2,15 +2,15 @@ package com.example.chess.moves;
 
 public class AttackingMove extends Move{
 
-    private final String takenPieceName;
+    private final int takenPiece;
 
-    public AttackingMove(int startPosition, int endPosition, int previousEnPassantTile, boolean[] previousCastleRights, int previousHalfMoveCount, String takenPieceName) {
+    public AttackingMove(int startPosition, int endPosition, int previousEnPassantTile, boolean[] previousCastleRights, int previousHalfMoveCount, int takenPiece) {
 
         super(startPosition, endPosition, previousEnPassantTile, previousCastleRights, previousHalfMoveCount);
-        this.takenPieceName = takenPieceName;
+        this.takenPiece = takenPiece;
     }
 
-    public String getTakenPieceName(){
-        return takenPieceName;
+    public int getTakenPiece(){
+        return takenPiece;
     }
 }

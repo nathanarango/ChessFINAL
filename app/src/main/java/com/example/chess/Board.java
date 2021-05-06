@@ -16,7 +16,9 @@ import com.example.chess.pieces.Rook;
 
 import java.util.ArrayList;
 
-public class Board {
+public class
+
+Board {
 
     private GameLogic logic = new GameLogic();
 
@@ -32,12 +34,14 @@ public class Board {
 
     public final int whiteMask = 16;
     public final int blackMask = 8;
+    public final int colorMask = 24;
     public final int kingMask = 1;
     public final int queenMask = 2;
     public final int rookMask = 3;
     public final int knightMask = 4;
     public final int bishopMask = 5;
     public final int pawnMask = 6;
+    public final int pieceMask = 7;
 
 
 
@@ -59,8 +63,7 @@ public class Board {
     private boolean inCheck;
     private boolean inDoubleCheck;
     private final ArrayList<Integer> blockingTiles = new ArrayList<>();
-    private final ArrayList<Integer> pinnedPieces = new ArrayList<>();
-    private final ArrayList<Integer> pinnedPiecesDirection = new ArrayList<>();
+    private int[] pinnedPieces = new int[64];
     private final ArrayList<Integer> currentTargetSquares = new ArrayList<>();
     private int currentStartSquare = -1;
 
@@ -210,8 +213,6 @@ public class Board {
         this.blockingTiles.clear();
         this.inCheck = false;
         this.inDoubleCheck = false;
-        this.pinnedPieces.clear();
-        this.pinnedPiecesDirection.clear();
         this.currentTargetSquares.clear();
         this.currentStartSquare = -1;
     }
@@ -221,99 +222,95 @@ public class Board {
         resetVariables();
         updateKingTiles();
 
-        this.pinnedPieces.addAll(((King) getPieceOnTile(this.myKingTile)).findPins(this.pieceColorOnTile,
-                true, getEnemyHorizontalSliders(), getEnemyDiagonalSliders()));
-        if(this.pinnedPieces.size() > 0) {
-            this.pinnedPiecesDirection.addAll(((King) getPieceOnTile(this.myKingTile)).findPins(this.pieceColorOnTile,
-                    false, getEnemyHorizontalSliders(), getEnemyDiagonalSliders()));
-        }
+        pinnedPieces= King.findPins(myKingTile, (whiteToMove ? whitePieces2 : blackPieces2), pieces, getEnemyHorizontalSliders(), getEnemyDiagonalSliders());
 
-        ArrayList<Piece> enemyPieces = this.whiteToMove ? this.blackPieces : this.whitePieces;
-        for(Piece enemyPiece : enemyPieces){
-            for(int tileNum : enemyPiece.getTilesAttacked(enemyPiece.getPosition(), enemyPiece.isWhite(), this.pieceColorOnTile, this.myKingTile)){
-                this.attackedByEnemy[tileNum] ++;
-                boolean checkMove = false;
-                if(tileNum == this.myKingTile){
-                    checkMove = true;
-                    if(this.inCheck){
-                        this.inDoubleCheck = true;
-                    }
-                    else{
-                        this.inCheck = true;
-                    }
-                }
-                if(enemyPiece instanceof Pawn){
-                    if(checkMove){
-                        this.blockingTiles.add(enemyPiece.getPosition());
-                    }
-                }
-                else if(enemyPiece instanceof Rook){
-                    if(checkMove){
-                        this.blockingTiles.addAll(GameLogic.getTilesToStopCheck(this.myKingTile, enemyPiece.getPosition()));
-                    }
-                }
-                else if(enemyPiece instanceof Knight){
-                    if(checkMove){
-                        this.blockingTiles.add(enemyPiece.getPosition());
-                    }
-                }
-                else if(enemyPiece instanceof Bishop){
-                    if(checkMove){
-                        this.blockingTiles.addAll(GameLogic.getTilesToStopCheck(this.myKingTile, enemyPiece.getPosition()));
-                    }
-                }
-                else if(enemyPiece instanceof Queen){
-                    if(checkMove){
-                        this.blockingTiles.addAll(GameLogic.getTilesToStopCheck(this.myKingTile, enemyPiece.getPosition()));
-                    }
-                }
-            }
-        }
+//        TODO update attacked tiles
+//        for(Piece enemyPiece : enemyPieces){
+//            for(int tileNum : enemyPiece.getTilesAttacked(enemyPiece.getPosition(), enemyPiece.isWhite(), this.pieceColorOnTile, this.myKingTile)){
+//                this.attackedByEnemy[tileNum] ++;
+//                boolean checkMove = false;
+//                if(tileNum == this.myKingTile){
+//                    checkMove = true;
+//                    if(this.inCheck){
+//                        this.inDoubleCheck = true;
+//                    }
+//                    else{
+//                        this.inCheck = true;
+//                    }
+//                }
+//                if(enemyPiece instanceof Pawn){
+//                    if(checkMove){
+//                        this.blockingTiles.add(enemyPiece.getPosition());
+//                    }
+//                }
+//                else if(enemyPiece instanceof Rook){
+//                    if(checkMove){
+//                        this.blockingTiles.addAll(GameLogic.getTilesToStopCheck(this.myKingTile, enemyPiece.getPosition()));
+//                    }
+//                }
+//                else if(enemyPiece instanceof Knight){
+//                    if(checkMove){
+//                        this.blockingTiles.add(enemyPiece.getPosition());
+//                    }
+//                }
+//                else if(enemyPiece instanceof Bishop){
+//                    if(checkMove){
+//                        this.blockingTiles.addAll(GameLogic.getTilesToStopCheck(this.myKingTile, enemyPiece.getPosition()));
+//                    }
+//                }
+//                else if(enemyPiece instanceof Queen){
+//                    if(checkMove){
+//                        this.blockingTiles.addAll(GameLogic.getTilesToStopCheck(this.myKingTile, enemyPiece.getPosition()));
+//                    }
+//                }
+//            }
+//        }
     }
 
-    public void updateVariablesForEval(){
-
-        for(int i = 0; i < 64; i ++){
-            attackedByMe[i] = 0;
-            attackedByEnemyPawn[i] = 0;
-            attackedByEnemyBishop[i] = 0;
-            attackedByEnemyKnight[i] = 0;
-            attackedByEnemyRook[i] = 0;
-            attackedByEnemyQueen[i] = 0;
-            attackedByEnemyKing[i] = 0;
-        }
-
-        ArrayList<Piece> myPieces = this.whiteToMove ? this.whitePieces : this.blackPieces;
-        for(Piece myPiece : myPieces){
-            for(int tileNum : myPiece.getTilesAttacked(myPiece.getPosition(), myPiece.isWhite(), this.pieceColorOnTile, this.myKingTile)){
-                this.attackedByMe[tileNum] ++;
-            }
-        }
-
-        ArrayList<Piece> enemyPieces = this.whiteToMove ? this.blackPieces : this.whitePieces;
-        for(Piece enemyPiece : enemyPieces){
-            for(int tileNum : enemyPiece.getTilesAttacked(enemyPiece.getPosition(), enemyPiece.isWhite(), this.pieceColorOnTile, this.myKingTile)){
-                if(enemyPiece instanceof Pawn){
-                    this.attackedByEnemyPawn[tileNum] ++;
-                }
-                else if(enemyPiece instanceof Rook){
-                    this.attackedByEnemyRook[tileNum] ++;
-                }
-                else if(enemyPiece instanceof Knight){
-                    this.attackedByEnemyKnight[tileNum] ++;
-                }
-                else if(enemyPiece instanceof Bishop){
-                    this.attackedByEnemyBishop[tileNum] ++;
-                }
-                else if(enemyPiece instanceof Queen){
-                    this.attackedByEnemyQueen[tileNum] ++;
-                }
-                else if(enemyPiece instanceof King){
-                    this.attackedByEnemyKing[tileNum] ++;
-                }
-            }
-        }
-    }
+//    TODO finish when rest is working
+//    public void updateVariablesForEval(){
+//
+//        for(int i = 0; i < 64; i ++){
+//            attackedByMe[i] = 0;
+//            attackedByEnemyPawn[i] = 0;
+//            attackedByEnemyBishop[i] = 0;
+//            attackedByEnemyKnight[i] = 0;
+//            attackedByEnemyRook[i] = 0;
+//            attackedByEnemyQueen[i] = 0;
+//            attackedByEnemyKing[i] = 0;
+//        }
+//
+//        ArrayList<Piece> myPieces = this.whiteToMove ? this.whitePieces : this.blackPieces;
+//        for(Piece myPiece : myPieces){
+//            for(int tileNum : myPiece.getTilesAttacked(myPiece.getPosition(), myPiece.isWhite(), this.pieceColorOnTile, this.myKingTile)){
+//                this.attackedByMe[tileNum] ++;
+//            }
+//        }
+//
+//        ArrayList<Piece> enemyPieces = this.whiteToMove ? this.blackPieces : this.whitePieces;
+//        for(Piece enemyPiece : enemyPieces){
+//            for(int tileNum : enemyPiece.getTilesAttacked(enemyPiece.getPosition(), enemyPiece.isWhite(), this.pieceColorOnTile, this.myKingTile)){
+//                if(enemyPiece instanceof Pawn){
+//                    this.attackedByEnemyPawn[tileNum] ++;
+//                }
+//                else if(enemyPiece instanceof Rook){
+//                    this.attackedByEnemyRook[tileNum] ++;
+//                }
+//                else if(enemyPiece instanceof Knight){
+//                    this.attackedByEnemyKnight[tileNum] ++;
+//                }
+//                else if(enemyPiece instanceof Bishop){
+//                    this.attackedByEnemyBishop[tileNum] ++;
+//                }
+//                else if(enemyPiece instanceof Queen){
+//                    this.attackedByEnemyQueen[tileNum] ++;
+//                }
+//                else if(enemyPiece instanceof King){
+//                    this.attackedByEnemyKing[tileNum] ++;
+//                }
+//            }
+//        }
+//    }
 
     public ArrayList<Integer> generateLegalMoves(Piece piece, boolean attackOnly){
 
@@ -547,12 +544,12 @@ public class Board {
             for(int endTile : this.generateLegalMoves(piece, attackOnly)){
 
                 if(piece instanceof Pawn && (piece.isWhite() ? (endTile < 8) : (endTile > 55))){
-                    for(int i = 0; i < 4; i ++){
+                    for(int i = 1; i < 5; i ++){
                         allLegalMoves.add(this.createMove(piece.getPosition(), endTile, i));
                     }
                 }
                 else {
-                    allLegalMoves.add(this.createMove(piece.getPosition(), endTile, -1));
+                    allLegalMoves.add(this.createMove(piece.getPosition(), endTile, 0));
                 }
             }
         }
@@ -563,32 +560,31 @@ public class Board {
 
         Move move;
 
-        if(promotionNumber >= 0){
+        if(promotionNumber > 0){
 
-            int pieceTakenNum = -1;
-            if(this.isPieceOnTile(endPosition)){
-                Piece pieceTaken = this.getPieceOnTile(endPosition);
-                if(pieceTaken instanceof Queen){
-                    pieceTakenNum = 0;
+            int pieceTakenNum = 0;
+            if(((pieces >> endPosition) & 1) == 1){
+                int pieceTaken = this.getPieceOnTile(endPosition);
+                if((pieceTaken & pieceMask) == queenMask){
+                    pieceTakenNum = queenMask;
                 }
-                else if(pieceTaken instanceof Rook){
-                    pieceTakenNum = 1;
+                else if((pieceTaken & pieceMask) == rookMask){
+                    pieceTakenNum = rookMask;
                 }
-                else if(pieceTaken instanceof Knight){
-                    pieceTakenNum = 2;
+                else if((pieceTaken & pieceMask) == knightMask){
+                    pieceTakenNum = knightMask;
                 }
-                else if(pieceTaken instanceof Bishop){
-                    pieceTakenNum = 3;
+                else{
+                    pieceTakenNum = bishopMask;
                 }
             }
 
             move = new PromotionMove(startPosition, endPosition, this.enPassantTile, this.castleRights, this.halfMoveCounter, promotionNumber, pieceTakenNum);
         }
-        else if(this.getPieceOnTile(startPosition) instanceof Pawn && this.enPassantTile == endPosition){
-            move = new EnPassantMove(startPosition, endPosition, this.enPassantTile, this.castleRights, this.halfMoveCounter);
+        else if((((pawns >> startPosition) & 1) == 1) && enPassantTile == endPosition){
+            move = new EnPassantMove(startPosition, endPosition, enPassantTile, castleRights, halfMoveCounter);
         }
-        else if(this.getPieceOnTile(startPosition) instanceof King && Math.abs(startPosition - endPosition) == 2){
-
+        else if((((kings >> startPosition) & 1) == 1) && Math.abs(startPosition - endPosition) == 2){
 
             int castleLocation = 0;
             if(endPosition < 4){
@@ -603,8 +599,8 @@ public class Board {
 
             move = new CastleMove(startPosition, endPosition, this.enPassantTile, this.castleRights, this.halfMoveCounter, castleLocation);
         }
-        else if(this.isPieceOnTile(endPosition)){
-            move = new AttackingMove(startPosition, endPosition, this.enPassantTile, this.castleRights, this.halfMoveCounter, this.getPieceOnTile(endPosition).getPieceName());
+        else if(((pieces >> endPosition) & 1) == 1){
+            move = new AttackingMove(startPosition, endPosition, this.enPassantTile, this.castleRights, this.halfMoveCounter, this.getPieceOnTile(endPosition));
         }
         else{
             move = new NormalMove(startPosition, endPosition, this.enPassantTile, this.castleRights, this.halfMoveCounter);

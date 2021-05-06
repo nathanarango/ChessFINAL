@@ -10,7 +10,8 @@ import com.example.chess.pieces.Rook;
 
 import java.util.ArrayList;
 
-public class GameLogic {
+public class
+GameLogic {
 
     public final long[] masks = fillMasks();
 
@@ -235,7 +236,7 @@ public class GameLogic {
             fullMoveCounter = Integer.parseInt(fullMoves);
         }
 
-        return new Board(whitePieces, blackPieces, whiteToMove,enPassantTile, castleRights, halfMoveCounter, fullMoveCounter, whitePieces2,
+        return new Board(whiteToMove,enPassantTile, castleRights, halfMoveCounter, fullMoveCounter, whitePieces2,
                 blackPieces2, kings, queens, rooks, knights, bishops, pawns);
     }
 
@@ -302,16 +303,16 @@ public class GameLogic {
 
     public static int getPinDirection(int vector){
         if(Math.abs(vector) == 1){
-            return 0;
-        }
-        else if(Math.abs(vector) == 7){
             return 1;
         }
-        else if(Math.abs(vector) == 8){
+        else if(Math.abs(vector) == 7){
             return 2;
         }
-        else{
+        else if(Math.abs(vector) == 8){
             return 3;
+        }
+        else{
+            return 4;
         }
     }
 }

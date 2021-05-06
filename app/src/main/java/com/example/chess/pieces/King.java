@@ -65,17 +65,15 @@ public class King extends Piece{
         return tilesToMove;
     }
 
-    public ArrayList<Integer> findPins(int[] pieceColorOnTile, boolean returnTiles, ArrayList<Integer> horizontalSliders, ArrayList<Integer> diagonalSliders){
+    public static int[] findPins(final int startPos, final long myPieces, final long allPieces, final long horizontalSlider, final long diagonalSliders){
 
-        ArrayList<Integer> pins = new ArrayList<>();
-        ArrayList<Integer> pinDirections = new ArrayList<>();
+        int[] pins = new int[64];
 
         for(int vector : MOVE_VECTORS){
 
-            int position = this.getPosition();
+            int position = startPos;
 
-            boolean  pinned = false;
-            int pinPieceTile = -1;
+            int pinPieceTile = 64;
 
             while(position + vector >= 0 && position + vector < 64){
 
@@ -84,20 +82,18 @@ public class King extends Piece{
                     break;
                 }
 
-                if(pieceColorOnTile[position + vector] >= 0){
+                if(((allPieces >> (position + vector)) & 1) == 1){
 
-                    if(pinned){
-                        if((horizontalSliders.contains(position + vector) && (Math.abs(vector) == 8 || Math.abs(vector) == 1)) ||
-                                (diagonalSliders.contains(position + vector) && (Math.abs(vector) == 7 || Math.abs(vector) == 9))){
+                    if(pinPieceTile < 64){
+                        if(((((horizontalSlider >> (position + vector)) & 1) == 1) && (Math.abs(vector) == 8 || Math.abs(vector) == 1)) ||
+                                ((((diagonalSliders >> (position + vector)) & 1) == 1) && (Math.abs(vector) == 7 || Math.abs(vector) == 9))){
 
-                            pins.add(pinPieceTile);
-                            pinDirections.add(GameLogic.getPinDirection(vector));
+                            pins[pinPieceTile] = GameLogic.getPinDirection(vector);
                         }
                         break;
                     }
                     else {
-                        if((pieceColorOnTile[position + vector] == 0 && this.isWhite()) || (pieceColorOnTile[position + vector] == 1 && !this.isWhite())){
-                            pinned = true;
+                        if(((myPieces >> (position + vector)) & 1) == 1){
                             pinPieceTile = position + vector;
                         }
                         else {
@@ -109,6 +105,6 @@ public class King extends Piece{
                 position += vector;
             }
         }
-        return returnTiles ? pins : pinDirections;
+        return pins;
     }
 }
