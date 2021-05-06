@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary_color">#FF14213d</color>
+    <color name="main_background">#FF168AAD</color>
+    <color name="dark_square">#FF7F5539</color>
+    <color name="light_square">#FFDDB892</color>
+    <color name="dark_square_highlight">#FFBE792A</color>
+    <color name="light_square_highlight">#FFE3A44D</color>
+    <color name="green_highlight">#2D5731</color>
+    <color name="red_highlight">#711E1E</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>
