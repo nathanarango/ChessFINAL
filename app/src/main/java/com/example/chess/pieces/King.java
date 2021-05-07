@@ -12,10 +12,9 @@ public class King extends Piece{
         super(position, isWhite);
     }
 
-    @Override
-    public ArrayList<Integer> getTilesAttacked(int startPosition, boolean useless, int[] useless2, int useless3) {
+    public static long getTilesAttacked(int startPosition) {
 
-        ArrayList<Integer> tilesAttacked = new ArrayList<>();
+        long tilesAttacked = 0L;
 
         for(int vector : MOVE_VECTORS){
 
@@ -23,42 +22,37 @@ public class King extends Piece{
                     ((vector == -7 || vector == 9 || vector == 1) && startPosition % 8 == 7)) &&
                     (startPosition + vector >= 0 && startPosition + vector < 64)){
 
-                tilesAttacked.add(startPosition + vector);
+                tilesAttacked |= (1L << (startPosition + vector));
             }
         }
         return tilesAttacked;
     }
 
-    public ArrayList<Integer> getTilesToMove(int[] pieceColorOnTile, boolean attackOnly, boolean[] castleRights) {
+    public static long getTilesToMove(final int startPos, final long myPieces, final long enemyPieces, final boolean attackOnly, final boolean[] castleRights) {
 
-        ArrayList<Integer> tilesToMove = new ArrayList<>();
-
-        int position = this.getPosition();
+        long tilesToMove = 0L;
 
         for(int vector : MOVE_VECTORS){
 
-            if(!(((vector == 7 || vector == -9 || vector == -1) && position % 8 == 0) ||
-                    ((vector == -7 || vector == 9 || vector == 1) && position % 8 == 7)) &&
-                    (position + vector >= 0 && position + vector < 64)){
+            if(!(((vector == 7 || vector == -9 || vector == -1) && startPos % 8 == 0) ||
+                    ((vector == -7 || vector == 9 || vector == 1) && startPos % 8 == 7)) &&
+                    (startPos + vector >= 0 && startPos + vector < 64)){
 
-                if(pieceColorOnTile[position + vector] >= 0){
-
-                    if((pieceColorOnTile[position + vector] == 1 && this.isWhite()) || (pieceColorOnTile[position + vector] == 0 && !this.isWhite())){
-                        tilesToMove.add(position + vector);
-                    }
-                }
-                else if(!attackOnly){
-                    tilesToMove.add(position + vector);
+                if(((myPieces >> (startPos + vector)) & 1) == 0){
+                    tilesToMove |= (1L << (startPos + vector));
                 }
             }
         }
 
-        if(!attackOnly) {
+        if(attackOnly){
+            tilesToMove &= enemyPieces;
+        }
+        else {
             if (castleRights[0]) {
-                tilesToMove.add(this.isWhite() ? 62 : 6);
+                tilesToMove |= (startPos == 4 ? (1L << 6) : (1L << 62));
             }
             if (castleRights[1]) {
-                tilesToMove.add(this.isWhite() ? 58 : 2);
+                tilesToMove |= (startPos == 4 ? (1L << 2) : (1L << 58));
             }
         }
 

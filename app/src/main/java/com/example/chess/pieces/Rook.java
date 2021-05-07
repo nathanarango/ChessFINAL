@@ -12,10 +12,9 @@ public class Rook extends Piece{
         super(position, isWhite);
     }
 
-    @Override
-    public ArrayList<Integer> getTilesAttacked(int startPosition, boolean useless, int[] pieceColorOnTile, int enemyKingTile) {
+    public static long getTilesAttacked(final int startPosition, final long allPieces, final int enemyKingTile) {
 
-        ArrayList<Integer> tilesAttacked = new ArrayList<>();
+        long tilesAttacked = 0L;
 
         for(int vector : MOVE_VECTORS){
 
@@ -27,9 +26,9 @@ public class Rook extends Piece{
                     break;
                 }
 
-                tilesAttacked.add(position + vector);
+                tilesAttacked |= (1L << (position + vector));
 
-                if(pieceColorOnTile[position + vector] >= 0 && position + vector != enemyKingTile){
+                if(((allPieces >> (position + vector)) & 1) == 1 && position + vector != enemyKingTile){
                     break;
                 }
 
@@ -39,17 +38,17 @@ public class Rook extends Piece{
         return tilesAttacked;
     }
 
-    public ArrayList<Integer> getTilesToMove(int[] pieceColorOnTile, boolean attackOnly, int enemyKingSquare, int pinDirection) {
+    public static long getTilesToMove(final int startPos, final long myPieces, final long allPieces, final boolean attackOnly, final int enemyKingSquare, final int pinDirection) {
 
-        ArrayList<Integer> tilesToMove = new ArrayList<>();
+        long tilesToMove = 0L;
 
         for(int vector : MOVE_VECTORS){
 
-            if(pinDirection >= 0 && GameLogic.getPinDirection(vector) != pinDirection){
+            if(pinDirection > 0 && GameLogic.getPinDirection(vector) != pinDirection){
                 continue;
             }
 
-            int position = this.getPosition();
+            int position = startPos;
 
             while(position + vector >= 0 && position + vector < 64){
 
@@ -57,24 +56,25 @@ public class Rook extends Piece{
                     break;
                 }
 
-                if(pieceColorOnTile[position + vector] >= 0){
+                if(((allPieces >> (position + vector)) & 1) == 1){
 
-                    if((pieceColorOnTile[position + vector] == 1 && this.isWhite()) || (pieceColorOnTile[position + vector] == 0 && !this.isWhite())){
-                        tilesToMove.add(position + vector);
+                    if(((myPieces >> (position + vector)) & 1) == 0){
+                        tilesToMove |= (1L << (position + vector));
                     }
                     break;
                 }
                 else{
                     if(attackOnly){
-                        //for(int tileNum : getTilesAttacked(enemyKingSquare, true, pieceColorOnTile, -1)){
-                            //if(tileNum == position + vector){
-                                //tilesToMove.add(position + vector);
-                                //break;
-                            //}
-                        //}
+//                        TODO for attack only checks
+//                        long tiles = getTilesAttacked(enemyKingSquare, allPieces, 64);
+//                        for(int i = 0; i < 64 && ((tiles >> i) & 1) == 1; i ++){
+//                            if(i == position + vector){
+//                                tilesToMove |= (1L << i);
+//                            }
+//                        }
                     }
                     else{
-                        tilesToMove.add(position + vector);
+                        tilesToMove |= (1L << (position + vector));
                     }
                 }
                 position += vector;

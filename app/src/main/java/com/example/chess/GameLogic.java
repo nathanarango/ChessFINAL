@@ -10,8 +10,7 @@ import com.example.chess.pieces.Rook;
 
 import java.util.ArrayList;
 
-public class
-GameLogic {
+public class GameLogic {
 
     public final long[] masks = fillMasks();
 
@@ -71,9 +70,6 @@ GameLogic {
         long bishops = 0L;
         long pawns = 0L;
 
-        ArrayList<Piece> whitePieces = new ArrayList<>();
-        ArrayList<Piece> blackPieces = new ArrayList<>();
-
         int tileCounter = 0;
         int slashCounter = 0;
         int indexNum = 0;
@@ -98,27 +94,21 @@ GameLogic {
                         whitePieces2 |= this.masks[tileCounter];
 
                         if(Character.toLowerCase(symbol) == 'r'){
-                            whitePieces.add(new Rook(tileCounter, true));
                             rooks |= this.masks[tileCounter];
                         }
                         else if(Character.toLowerCase(symbol) == 'n'){
-                            whitePieces.add(new Knight(tileCounter, true));
                             knights |= this.masks[tileCounter];
                         }
                         else if(Character.toLowerCase(symbol) == 'b'){
-                            whitePieces.add(new Bishop(tileCounter, true));
                             bishops |= this.masks[tileCounter];
                         }
                         else if(Character.toLowerCase(symbol) == 'k'){
-                            whitePieces.add(new King(tileCounter, true));
                             kings |= this.masks[tileCounter];
                         }
                         else if(Character.toLowerCase(symbol) == 'q'){
-                            whitePieces.add(new Queen(tileCounter, true));
                             queens |= this.masks[tileCounter];
                         }
                         else{
-                            whitePieces.add(new Pawn(tileCounter, true));
                             pawns |= this.masks[tileCounter];
                         }
                     }
@@ -126,27 +116,21 @@ GameLogic {
                         blackPieces2 |= this.masks[tileCounter];
 
                         if(Character.toLowerCase(symbol) == 'r'){
-                            blackPieces.add(new Rook(tileCounter, false));
                             rooks |= this.masks[tileCounter];
                         }
                         else if(Character.toLowerCase(symbol) == 'n'){
-                            blackPieces.add(new Knight(tileCounter, false));
                             knights |= this.masks[tileCounter];
                         }
                         else if(Character.toLowerCase(symbol) == 'b'){
-                            blackPieces.add(new Bishop(tileCounter, false));
                             bishops |= this.masks[tileCounter];
                         }
                         else if(Character.toLowerCase(symbol) == 'k'){
-                            blackPieces.add(new King(tileCounter, false));
                             kings |= this.masks[tileCounter];
                         }
                         else if(Character.toLowerCase(symbol) == 'q'){
-                            blackPieces.add(new Queen(tileCounter, false));
                             queens |= this.masks[tileCounter];
                         }
                         else{
-                            blackPieces.add(new Pawn(tileCounter, false));
                             pawns |= this.masks[tileCounter];
                         }
                     }
@@ -240,34 +224,34 @@ GameLogic {
                 blackPieces2, kings, queens, rooks, knights, bishops, pawns);
     }
 
-    public static ArrayList<Integer> getTilesToStopCheck(int kingPosition, int enemyPosition){
+    public static long getTilesToStopCheck(int kingPosition, int enemyPosition){
 
-        ArrayList<Integer> tiles = new ArrayList<>();
+        long tiles = 0L;
 
         int difference = enemyPosition - kingPosition;
 
         if(kingPosition % 8 == enemyPosition % 8){
             int vector = 8 * difference / Math.abs(difference);
             for(int i = kingPosition; i != enemyPosition; i += vector){
-                tiles.add(i + vector);
+                tiles |= (1L << (i + vector));
             }
         }
         else if(getRow(kingPosition) == getRow(enemyPosition)){
             int vector = difference / Math.abs(difference);
             for(int i = kingPosition; i != enemyPosition; i += vector){
-                tiles.add(i + vector);
+                tiles |= (1L << (i + vector));
             }
         }
         else if(difference % 7 == 0 && Math.abs(difference) != 63){
             int vector = 7 * difference / Math.abs(difference);
             for(int i = kingPosition; i != enemyPosition; i += vector){
-                tiles.add(i + vector);
+                tiles |= (1L << (i + vector));
             }
         }
         else if(difference % 9 == 0){
             int vector = 9 * difference / Math.abs(difference);
             for(int i = kingPosition; i != enemyPosition; i += vector){
-                tiles.add(i + vector);
+                tiles |= (1L << (i + vector));
             }
         }
         return tiles;

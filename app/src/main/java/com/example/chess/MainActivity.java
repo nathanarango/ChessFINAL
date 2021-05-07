@@ -37,6 +37,17 @@ public class MainActivity extends AppCompatActivity {
     int[] castleMoveCounterArray = new int[4];
     int[] promotionMoveCounterArray = new int[4];
 
+    public static final int whiteMask = 16;
+    public static final int blackMask = 8;
+    public static final int colorMask = 24;
+    public static final int kingMask = 1;
+    public static final int queenMask = 2;
+    public static final int rookMask = 3;
+    public static final int knightMask = 4;
+    public static final int bishopMask = 5;
+    public static final int pawnMask = 6;
+    public static final int pieceMask = 7;
+
     public static final int[] TILE_IDS = fillTileIds();
     public static final Map<String, Integer> PIECE_IDS = fillPieceIds();
     public static final boolean[] IS_DARK_SQUARE = fillDarkSquare();
@@ -104,9 +115,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        this.currentBoard = logic.createBoardFromFEN("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
-        updateDisplay2();
-        testBinary();
+        this.currentBoard = logic.createStartBoard();
+        updateDisplay();
     }
 
     public void onTileClick(View view) {
@@ -115,63 +125,50 @@ public class MainActivity extends AppCompatActivity {
 
         int tileNum = Integer.parseInt(view.getTag().toString());
 
-        //runSpeedTest(5, 5);
-        //runCountTest(5, true);
-        //runCountTest(2, false);
-        //runBreakdownTest(2);
-        //System.out.println(positionCountTestBulk(5));
+        runSpeedTest(5, 4);
 
-        handleTilePress(tileNum);
-    }
-
-    public void updateDisplay2(){
-
-        for(int i = 0; i < 64; i ++){
-
-            ((ImageButton) findViewById(TILE_IDS[i])).setImageResource(PIECE_IDS.get(GameLogic.getPieceName(currentBoard.getPieceOnTile2(i))));
-        }
-    }
-
-    public void testBinary() {
-
-        long[] masks = new long[64];
-        for (int i = 0; i < 64; i++) {
-            masks[i] = 1L << i;
-        }
+        //handleTilePress(tileNum);
     }
 
     public void handleTilePress(int tileNum){
 
-        if(this.currentBoard.getCurrentTargetSquares().contains(tileNum)){
+        if(currentBoard.getCurrentTargetSquares().contains(tileNum)){
 
-            boolean isPromotion = (this.currentBoard.getPieceOnTile(this.currentBoard.getCurrentStartSquare()) instanceof Pawn && (this.currentBoard.isWhiteToMove() ? (tileNum < 8) : (tileNum > 55)));
+            boolean isPromotion = (((currentBoard.getPieceOnTile(currentBoard.getCurrentStartSquare()) & pieceMask) == pawnMask) &&
+                    (currentBoard.isWhiteToMove() ? (tileNum < 8) : (tileNum > 55)));
 
-            Move move = this.currentBoard.createMove(this.currentBoard.getCurrentStartSquare(), tileNum, isPromotion ? 0 : 0);
-            this.currentBoard.makeMove(move);
-            Search searcher = new Search(this.currentBoard);
-            long startTime = System.currentTimeMillis();
-            this.currentBoard.makeMove(searcher.findBestMove(2));
-            long endTime = System.currentTimeMillis();
-            displayText("Evaluations: " + searcher.counter + "   Time: " + String.valueOf(endTime - startTime));
+            Move move = currentBoard.createMove(currentBoard.getCurrentStartSquare(), tileNum, isPromotion ? 2 : 0);
+            currentBoard.makeMove(move);
+//            Search searcher = new Search(this.currentBoard);
+//            long startTime = System.currentTimeMillis();
+//            currentBoard.makeMove(searcher.findBestMove(2));
+//            long endTime = System.currentTimeMillis();
+//            displayText("Evaluations: " + searcher.counter + "   Time: " + String.valueOf(endTime - startTime));
             updateDisplay();
         }
         else {
             this.currentBoard.clearCurrentTargetSquares();
-            if ((this.currentBoard.getPieceColorOnTile()[tileNum] == 0 && this.currentBoard.isWhiteToMove()) || (this.currentBoard.getPieceColorOnTile()[tileNum] == 1 && !this.currentBoard.isWhiteToMove())) {
-                this.currentBoard.setCurrentStartSquare(tileNum);
-                this.currentBoard.setCurrentTargetSquares(this.currentBoard.generateLegalMoves(this.currentBoard.getPieceOnTile(tileNum), false));
-                if(this.currentBoard.getCurrentTargetSquares().size() == 0){
+            if ((((currentBoard.getWhitePieces() >> tileNum) & 1) == 1 && currentBoard.isWhiteToMove()) || (((currentBoard.getBlackPieces() >> tileNum) & 1) == 1 && !currentBoard.isWhiteToMove())) {
+                currentBoard.setCurrentStartSquare(tileNum);
+
+                long legalMoves = currentBoard.generateLegalMoves(currentBoard.getPieceOnTile(tileNum), tileNum, false);
+                ArrayList<Integer> temp = new ArrayList<>();
+                for(int i = 0; i < 64; i ++){
+                    if(((legalMoves >> i) & 1) == 1){
+                        temp.add(i);
+                    }
+                }
+                currentBoard.setCurrentTargetSquares(temp);
+
+                if(currentBoard.getCurrentTargetSquares().size() == 0){
                     highlightTileRed(tileNum);
                 }
                 else{
                     highlightTileGreen(tileNum);
-                    for(int tile : this.currentBoard.getCurrentTargetSquares()){
+                    for(int tile : currentBoard.getCurrentTargetSquares()){
                         highlightTile(tile);
                     }
                 }
-            }
-            else {
-                this.currentBoard.setCurrentTargetSquares(new ArrayList<>());
             }
         }
     }
@@ -329,9 +326,10 @@ public class MainActivity extends AppCompatActivity {
 
             this.currentBoard.makeMove(move);
 
-            if(currentBoard.getPieceOnTile(move.getEndPosition()).getTilesAttacked(move.getEndPosition(), !currentBoard.isWhiteToMove(), currentBoard.getPieceColorOnTile(), currentBoard.getMyKingTile()).contains(currentBoard.getMyKingTile())){
-                this.checkCounter ++;
-            }
+//            TODO count checks
+//            if(currentBoard.getPieceOnTile(move.getEndPosition()).getTilesAttacked(move.getEndPosition(), !currentBoard.isWhiteToMove(), currentBoard.getPieceColorOnTile(), currentBoard.getMyKingTile()).contains(currentBoard.getMyKingTile())){
+//                this.checkCounter ++;
+//            }
 
             if(move instanceof AttackingMove){
                 this.attackMoveCounter ++;
@@ -351,9 +349,10 @@ public class MainActivity extends AppCompatActivity {
             }
 
             int testCounter = 0;
-            for(Piece piece : currentBoard.isWhiteToMove() ? currentBoard.getWhitePieces() : currentBoard.getBlackPieces()){
-                testCounter += currentBoard.generateLegalMoves(piece, false).size();
-            }
+//            TODO other test
+//            for(Piece piece : currentBoard.isWhiteToMove() ? currentBoard.getWhitePieces() : currentBoard.getBlackPieces()){
+//                testCounter += currentBoard.generateLegalMoves(piece, false).size();
+//            }
             if(testCounter == 0){
                 this.checkmateCounter++;
             }
@@ -409,24 +408,15 @@ public class MainActivity extends AppCompatActivity {
 
     public void updateDisplay(){
 
-        clearDisplay();
-
-        for(Piece piece : this.currentBoard.getWhitePieces()){
-
-            ImageButton tile = findViewById(TILE_IDS[piece.getPosition()]);
-            tile.setImageResource(PIECE_IDS.get(piece.getPieceName()));
-        }
-        for(Piece piece : this.currentBoard.getBlackPieces()){
-
-            ImageButton tile = findViewById(TILE_IDS[piece.getPosition()]);
-            tile.setImageResource(PIECE_IDS.get(piece.getPieceName()));
+        for(int i = 0; i < 64; i ++){
+            ((ImageButton) findViewById(TILE_IDS[i])).setImageResource(PIECE_IDS.get(GameLogic.getPieceName(currentBoard.getPieceOnTile(i))));
         }
     }
 
     public void clearDisplay(){
         for(int i = 0; i < 64; i ++){
             ImageButton tile = findViewById(TILE_IDS[i]);
-            tile.setImageResource(PIECE_IDS.get("empty"));
+            tile.setImageResource(R.drawable.empty);
         }
     }
 

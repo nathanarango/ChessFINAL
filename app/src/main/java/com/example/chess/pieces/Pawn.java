@@ -12,10 +12,9 @@ public class Pawn extends Piece{
         super(position, isWhite);
     }
 
-    @Override
-    public ArrayList<Integer> getTilesAttacked(int startPosition, boolean isWhite, int[] useless, int useless2) {
+    public static long getTilesAttacked(final int startPosition, final boolean isWhite) {
 
-        ArrayList<Integer> tilesAttacked = new ArrayList<>();
+        long tilesAttacked = 0L;
 
         int multiplier = isWhite ? -1 : 1;
 
@@ -23,31 +22,29 @@ public class Pawn extends Piece{
 
             if(vector != 8){
 
-                vector = vector * multiplier;
-
-                int endPosition = startPosition + vector;
+                vector *= multiplier;
 
                 if(!(((vector == -7 || vector == 9) && startPosition % 8 == 7) ||
                         ((vector == 7 || vector == -9) && startPosition % 8 == 0)) &&
-                        (endPosition >= 0 && endPosition < 64)){
+                        (startPosition + vector >= 0 && startPosition + vector < 64)){
 
-                    tilesAttacked.add(endPosition);
+                    tilesAttacked |= (1L << (startPosition + vector));
                 }
             }
         }
         return tilesAttacked;
     }
 
-    public ArrayList<Integer> getTilesToMove(int[] pieceColorOnTile, boolean attackOnly, int enemyKingSquare, int enPassantTile, int pinDirection) {
+    public static long getTilesToMove(final int startPos, final long enemyPieces, final long allPieces, final boolean attackOnly,
+                                      final int enemyKingSquare, final int enPassantTile, final int pinDirection, final boolean isWhite) {
 
-        ArrayList<Integer> tilesToMove = new ArrayList<>();
+        long tilesToMove = 0L;
 
-        int position = this.getPosition();
-        int multiplier = this.isWhite() ? -1 : 1;
+        int multiplier = isWhite ? -1 : 1;
 
         for(int vector : MOVE_VECTORS){
 
-            if(pinDirection >= 0 && GameLogic.getPinDirection(vector) != pinDirection){
+            if(pinDirection > 0 && GameLogic.getPinDirection(vector) != pinDirection){
                 continue;
             }
 
@@ -55,37 +52,15 @@ public class Pawn extends Piece{
 
                 vector = vector * multiplier;
 
-                if(position + vector >= 0 && position + vector < 64 && pieceColorOnTile[position + vector] == -1){
+                if(startPos + vector >= 0 && startPos + vector < 64 && (((allPieces >> (startPos + vector)) & 1) == 0)){
 
-                    if(attackOnly){
+                    tilesToMove |= (1L << (startPos + vector));
 
-                        //for(int tileNum : getTilesAttacked(enemyKingSquare, !this.isWhite(), new int[]{}, -1)){
-                            //if(tileNum == position + vector){
-                                //tilesToMove.add(position + vector);
-                                //break;
-                            //}
-                        //}
-                    }
-                    else{
-                        tilesToMove.add(position + vector);
-                    }
+                    if(isWhite && (47 < startPos && startPos < 56) || !isWhite && (7 < startPos && startPos < 16)){
 
-                    if(this.isWhite() && (47 < position && position < 56) || !this.isWhite() && (7 < position && position < 16)){
+                        if(((allPieces >> (startPos + vector + vector)) & 1) == 0){
 
-                        if(pieceColorOnTile[position + vector + vector] == -1){
-
-                            if(attackOnly){
-
-                                //for(int tileNum : getTilesAttacked(enemyKingSquare, !this.isWhite(), new int[]{}, -1)){
-                                    //if(tileNum == position + vector + vector){
-                                        //tilesToMove.add(position + vector + vector);
-                                        //break;
-                                    //}
-                                //}
-                            }
-                            else{
-                                tilesToMove.add(position + vector + vector);
-                            }
+                            tilesToMove |= (1L << (startPos + vector + vector));
                         }
                     }
                 }
@@ -93,20 +68,25 @@ public class Pawn extends Piece{
             else{
 
                 vector = vector * multiplier;
-                int endPosition = position + vector;
 
-                if(!(((vector == -7 || vector == 9) && position % 8 == 7) ||
-                        ((vector == 7 || vector == -9) && position % 8 == 0)) &&
-                        (endPosition >= 0 && endPosition < 64)){
+                if(!(((vector == -7 || vector == 9) && startPos % 8 == 7) ||
+                        ((vector == 7 || vector == -9) && startPos % 8 == 0)) &&
+                        (startPos + vector >= 0 && startPos + vector < 64)){
 
-                    if((pieceColorOnTile[endPosition] >= 0 && ((pieceColorOnTile[endPosition] == 1 && this.isWhite()) ||
-                            (pieceColorOnTile[endPosition] == 0 && !this.isWhite()))) || endPosition == enPassantTile){
+                    if(((enemyPieces >> (startPos + vector)) & 1) == 1 || startPos + vector == enPassantTile){
 
-                        tilesToMove.add(endPosition);
+                        tilesToMove |= (1L << (startPos + vector));
                     }
                 }
             }
         }
+
+//        TODO for attack only checks
+//        if(attackOnly){
+//            long checkTiles = getTilesAttacked(enemyKingSquare, !isWhite);
+//            tilesToMove &= (checkTiles | enemyPieces);
+//        }
+
         return tilesToMove;
     }
 }

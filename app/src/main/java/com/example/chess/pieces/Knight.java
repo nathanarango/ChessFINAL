@@ -1,5 +1,7 @@
 package com.example.chess.pieces;
 
+import com.example.chess.GameLogic;
+
 import java.util.ArrayList;
 
 public class Knight extends Piece{
@@ -10,10 +12,9 @@ public class Knight extends Piece{
         super(position, isWhite);
     }
 
-    @Override
-    public ArrayList<Integer> getTilesAttacked(int startPosition, boolean useless, int[] useless2, int useless3) {
+    public static long getTilesAttacked(final int startPosition) {
 
-        ArrayList<Integer> tilesAttacked = new ArrayList<>();
+        long tilesAttacked = 0L;
 
         for(int vector : MOVE_VECTORS){
 
@@ -23,47 +24,36 @@ public class Knight extends Piece{
                     ((vector == 6 || vector == -10) && startPosition % 8 == 1)) &&
                     (startPosition + vector >= 0 && startPosition + vector < 64)){
 
-                tilesAttacked.add(startPosition + vector);
+                tilesAttacked |= (1L << (startPosition + vector));
             }
         }
         return tilesAttacked;
     }
 
-    public ArrayList<Integer> getTilesToMove(int[] pieceColorOnTile, boolean attackOnly, int enemyKingSquare) {
+    public static long getTilesToMove(final int startPos, final long myPieces, final long enemyPieces, final boolean attackOnly, final int enemyKingSquare){
 
-        ArrayList<Integer> tilesToMove = new ArrayList<>();
-
-        int position = this.getPosition();
+        long tilesToMove = 0L;
 
         for(int vector : MOVE_VECTORS){
 
-            if(!(((vector == -6 || vector == 10) && position % 8 == 6) ||
-                    ((vector == -6 || vector == 10 || vector == 17 || vector == -15) && position % 8 == 7) ||
-                    ((vector == 6 || vector == -10 || vector == -17 || vector == 15) && position % 8 == 0) ||
-                    ((vector == 6 || vector == -10) && position % 8 == 1)) &&
-                    (position + vector >= 0 && position + vector < 64)){
+            if(!(((vector == -6 || vector == 10) && startPos % 8 == 6) ||
+                    ((vector == -6 || vector == 10 || vector == 17 || vector == -15) && startPos % 8 == 7) ||
+                    ((vector == 6 || vector == -10 || vector == -17 || vector == 15) && startPos % 8 == 0) ||
+                    ((vector == 6 || vector == -10) && startPos % 8 == 1)) &&
+                    (startPos + vector >= 0 && startPos + vector < 64)){
 
-                if(pieceColorOnTile[position + vector] >= 0){
-
-                    if((pieceColorOnTile[position + vector] == 1 && this.isWhite()) || (pieceColorOnTile[position + vector] == 0 && !this.isWhite())){
-                        tilesToMove.add(position + vector);
-                    }
-                }
-                else{
-                    if(attackOnly){
-                        //for(int tileNum : getTilesAttacked(enemyKingSquare, true, new int[]{}, -1)){
-                            //if(tileNum == position + vector){
-                                //tilesToMove.add(position + vector);
-                                //break;
-                            //}
-                        //}
-                    }
-                    else{
-                        tilesToMove.add(position + vector);
-                    }
+                if(((myPieces >> (startPos + vector)) & 1) == 0){
+                    tilesToMove |= (1L << (startPos + vector));
                 }
             }
         }
+
+//        TODO for attack only checks
+//        if(attackOnly){
+//            long checkTiles = getTilesAttacked(enemyKingSquare);
+//            tilesToMove &= (checkTiles | enemyPieces);
+//        }
+
         return tilesToMove;
     }
 }

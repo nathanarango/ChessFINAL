@@ -10,7 +10,6 @@ import com.example.chess.pieces.Bishop;
 import com.example.chess.pieces.King;
 import com.example.chess.pieces.Knight;
 import com.example.chess.pieces.Pawn;
-import com.example.chess.pieces.Piece;
 import com.example.chess.pieces.Queen;
 import com.example.chess.pieces.Rook;
 
@@ -20,10 +19,8 @@ public class
 
 Board {
 
-    private GameLogic logic = new GameLogic();
-
-    public long whitePieces2;
-    public long blackPieces2;
+    public long whitePieces;
+    public long blackPieces;
     public long pieces;
     public long kings;
     public long queens;
@@ -32,16 +29,16 @@ Board {
     public long bishops;
     public long pawns;
 
-    public final int whiteMask = 16;
-    public final int blackMask = 8;
-    public final int colorMask = 24;
-    public final int kingMask = 1;
-    public final int queenMask = 2;
-    public final int rookMask = 3;
-    public final int knightMask = 4;
-    public final int bishopMask = 5;
-    public final int pawnMask = 6;
-    public final int pieceMask = 7;
+    public static final int whiteMask = 16;
+    public static final int blackMask = 8;
+    public static final int colorMask = 24;
+    public static final int kingMask = 1;
+    public static final int queenMask = 2;
+    public static final int rookMask = 3;
+    public static final int knightMask = 4;
+    public static final int bishopMask = 5;
+    public static final int pawnMask = 6;
+    public static final int pieceMask = 7;
 
 
 
@@ -51,38 +48,35 @@ Board {
     private int fullMoveCounter;
     private int halfMoveCounter;
     private final int[] attackedByMe = new int[64];
-    private final int[] attackedByEnemy = new int[64];
+    private final int[] attackedByEnemyOld = new int[64];
     private final int[] attackedByEnemyPawn = new int[64];
     private final int[] attackedByEnemyBishop = new int[64];
     private final int[] attackedByEnemyKnight = new int[64];
     private final int[] attackedByEnemyRook = new int[64];
     private final int[] attackedByEnemyQueen = new int[64];
     private final int[] attackedByEnemyKing = new int[64];
+    private long attackedByEnemy;
     private int myKingTile;
     private int enemyKingTile;
     private boolean inCheck;
     private boolean inDoubleCheck;
-    private final ArrayList<Integer> blockingTiles = new ArrayList<>();
+    private long blockingTiles = 0L;
     private int[] pinnedPieces = new int[64];
     private final ArrayList<Integer> currentTargetSquares = new ArrayList<>();
     private int currentStartSquare = -1;
 
     public Board(boolean whiteToMove, int enPassantTile, boolean[] castleRights, int halfMoveCounter, int fullMoveCounter,
-                 long whitePieces2, long blackPieces2, long kings, long queens, long rooks, long knights, long bishops, long pawns){
+                 long whitePieces, long blackPieces, long kings, long queens, long rooks, long knights, long bishops, long pawns){
 
-
-        this.whitePieces2 = whitePieces2;
-        this.blackPieces2 = blackPieces2;
+        this.whitePieces = whitePieces;
+        this.blackPieces = blackPieces;
         this.kings = kings;
         this.queens = queens;
         this.rooks = rooks;
         this.knights = knights;
         this.bishops = bishops;
         this.pawns = pawns;
-        this.pieces = whitePieces2 | blackPieces2;
-
-
-
+        this.pieces = whitePieces | blackPieces;
 
         this.whiteToMove = whiteToMove;
         this.enPassantTile = enPassantTile;
@@ -91,6 +85,18 @@ Board {
         this.halfMoveCounter = halfMoveCounter;
 
         updateEssentialVariables();
+    }
+
+    public long getAttackedByEnemy(){
+        return attackedByEnemy;
+    }
+
+    public long getWhitePieces(){
+        return whitePieces;
+    }
+
+    public long getBlackPieces(){
+        return blackPieces;
     }
 
     public boolean isInCheck(){
@@ -140,21 +146,21 @@ Board {
     }
 
     public long getEnemyHorizontalSliders(){
-        return (rooks | queens) & (whiteToMove ? blackPieces2 : whitePieces2);
+        return (rooks | queens) & (whiteToMove ? blackPieces : whitePieces);
     }
 
     public long getEnemyDiagonalSliders(){
-        return (bishops | queens) & (whiteToMove ? blackPieces2 : whitePieces2);
+        return (bishops | queens) & (whiteToMove ? blackPieces : whitePieces);
     }
 
     public int getPieceOnTile(int tile){
 
         int piece = 0;
 
-        if(((whitePieces2 >> tile) & 1) == 1){
+        if(((whitePieces >> tile) & 1) == 1){
             piece |= whiteMask;
         }
-        else if(((blackPieces2 >> tile) & 1) == 1){
+        else if(((blackPieces >> tile) & 1) == 1){
             piece |= blackMask;
         }
         else{
@@ -183,20 +189,37 @@ Board {
         return piece;
     }
 
+    public long getTilesAttacked(int startPosition, int piece){
+        switch (piece & pieceMask){
+            case pawnMask:
+                return Pawn.getTilesAttacked(startPosition, !whiteToMove);
+            case rookMask:
+                return Rook.getTilesAttacked(startPosition, pieces, myKingTile);
+            case knightMask:
+                return Knight.getTilesAttacked(startPosition);
+            case bishopMask:
+                return Bishop.getTilesAttacked(startPosition, pieces, myKingTile);
+            case queenMask:
+                return Queen.getTilesAttacked(startPosition, pieces, myKingTile);
+            default:
+                return King.getTilesAttacked(startPosition);
+        }
+    }
+
     private void updateKingTiles(){
 
-        long myKing = kings & ((whiteToMove) ? whitePieces2 : blackPieces2);
-        long enemyKing = kings & ((whiteToMove) ? blackPieces2 : whitePieces2);
+        long myKing = kings & ((whiteToMove) ? whitePieces : blackPieces);
+        long enemyKing = kings & ((whiteToMove) ? blackPieces : whitePieces);
 
         boolean whiteUpdated = false;
         boolean blackUpdated = false;
         int i = 0;
         while(!(whiteUpdated && blackUpdated)){
-            if(myKing == logic.masks[i]){
+            if(myKing == (1L << i)){
                 myKingTile = i;
                 whiteUpdated = true;
             }
-            if(enemyKing == logic.masks[i]){
+            if(enemyKing == (1L << i)){
                 enemyKingTile = i;
                 blackUpdated = true;
             }
@@ -206,11 +229,8 @@ Board {
 
     public void resetVariables(){
 
-        for(int i = 0; i < 64; i ++){
-            attackedByEnemy[i] = 0;
-        }
-
-        this.blockingTiles.clear();
+        this.attackedByEnemy = 0L;
+        this.blockingTiles = 0L;
         this.inCheck = false;
         this.inDoubleCheck = false;
         this.currentTargetSquares.clear();
@@ -222,49 +242,37 @@ Board {
         resetVariables();
         updateKingTiles();
 
-        pinnedPieces= King.findPins(myKingTile, (whiteToMove ? whitePieces2 : blackPieces2), pieces, getEnemyHorizontalSliders(), getEnemyDiagonalSliders());
+        pinnedPieces = King.findPins(myKingTile, (whiteToMove ? whitePieces : blackPieces), pieces, getEnemyHorizontalSliders(), getEnemyDiagonalSliders());
 
-//        TODO update attacked tiles
-//        for(Piece enemyPiece : enemyPieces){
-//            for(int tileNum : enemyPiece.getTilesAttacked(enemyPiece.getPosition(), enemyPiece.isWhite(), this.pieceColorOnTile, this.myKingTile)){
-//                this.attackedByEnemy[tileNum] ++;
-//                boolean checkMove = false;
-//                if(tileNum == this.myKingTile){
-//                    checkMove = true;
-//                    if(this.inCheck){
-//                        this.inDoubleCheck = true;
-//                    }
-//                    else{
-//                        this.inCheck = true;
-//                    }
-//                }
-//                if(enemyPiece instanceof Pawn){
-//                    if(checkMove){
-//                        this.blockingTiles.add(enemyPiece.getPosition());
-//                    }
-//                }
-//                else if(enemyPiece instanceof Rook){
-//                    if(checkMove){
-//                        this.blockingTiles.addAll(GameLogic.getTilesToStopCheck(this.myKingTile, enemyPiece.getPosition()));
-//                    }
-//                }
-//                else if(enemyPiece instanceof Knight){
-//                    if(checkMove){
-//                        this.blockingTiles.add(enemyPiece.getPosition());
-//                    }
-//                }
-//                else if(enemyPiece instanceof Bishop){
-//                    if(checkMove){
-//                        this.blockingTiles.addAll(GameLogic.getTilesToStopCheck(this.myKingTile, enemyPiece.getPosition()));
-//                    }
-//                }
-//                else if(enemyPiece instanceof Queen){
-//                    if(checkMove){
-//                        this.blockingTiles.addAll(GameLogic.getTilesToStopCheck(this.myKingTile, enemyPiece.getPosition()));
-//                    }
-//                }
-//            }
-//        }
+        long enemyPieces = (whiteToMove ? blackPieces : whitePieces);
+
+        for(int i = 0; i < 64; i ++){
+            if(((enemyPieces >> i) & 1) == 1){
+                int piece = getPieceOnTile(i);
+                long tilesAttacked = getTilesAttacked(i, piece);
+                attackedByEnemy |= tilesAttacked;
+                boolean checkMove = false;
+                for(int j = 0; j < 64; j ++){
+                    if(j == myKingTile && ((tilesAttacked >> j) & 1) == 1){
+                        checkMove = true;
+                        if(inCheck){
+                            inDoubleCheck = true;
+                        }
+                        else{
+                            inCheck = true;
+                        }
+                    }
+                }
+                if(checkMove){
+                    if((piece & pieceMask) == pawnMask || (piece & pieceMask) == knightMask){
+                        blockingTiles |= (1L << i);
+                    }
+                    else{
+                        blockingTiles |= GameLogic.getTilesToStopCheck(myKingTile, i);
+                    }
+                }
+            }
+        }
     }
 
 //    TODO finish when rest is working
@@ -312,223 +320,192 @@ Board {
 //        }
 //    }
 
-    public ArrayList<Integer> generateLegalMoves(Piece piece, boolean attackOnly){
+    public long generateLegalMoves(final int piece, final int position, final boolean attackOnly){
 
-        ArrayList<Integer> legalMoves = new ArrayList<>();
+        long legalMoves = 0L;
 
         if(this.inDoubleCheck){
 
-            if(piece instanceof King){
-                for(int possibleTile : ((King) piece).getTilesToMove(this.pieceColorOnTile, attackOnly, new boolean[]{false, false})){
-                    if(this.attackedByEnemy[possibleTile] == 0){
-                        legalMoves.add(possibleTile);
-                    }
-                }
+            if((piece & pieceMask) == kingMask){
+                long possibleTiles = King.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces), (whiteToMove ? blackPieces : whitePieces), false, new boolean[]{false, false});
+                legalMoves |= (possibleTiles & (~attackedByEnemy));
             }
         }
         else if(this.inCheck){
 
-            if(piece instanceof King){
-                for(int possibleTile : ((King) piece).getTilesToMove(this.pieceColorOnTile, attackOnly, new boolean[]{false, false})){
-                    if(this.attackedByEnemy[possibleTile] == 0){
-                        legalMoves.add(possibleTile);
-                    }
-                }
+            if((piece & pieceMask) == kingMask){
+                long possibleTiles = King.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces), (whiteToMove ? blackPieces : whitePieces), false, new boolean[]{false, false});
+                legalMoves |= (possibleTiles & (~attackedByEnemy));
             }
-            else if(!this.pinnedPieces.contains(piece.getPosition())){
+            else if(pinnedPieces[position] == 0){
 
-                ArrayList<Integer> possibleTiles = new ArrayList<>();
+                long possibleTiles = 0L;
 
-                if(piece instanceof Queen){
-                    possibleTiles.addAll(((Queen) piece).getTilesToMove(this.pieceColorOnTile, attackOnly, this.enemyKingTile, -1));
-                }
-                else if(piece instanceof Rook){
-                    possibleTiles.addAll(((Rook) piece).getTilesToMove(this.pieceColorOnTile, attackOnly, this.enemyKingTile, -1));
-                }
-                else if(piece instanceof Bishop){
-                    possibleTiles.addAll(((Bishop) piece).getTilesToMove(this.pieceColorOnTile, attackOnly, this.enemyKingTile, -1));
-                }
-                else if(piece instanceof Knight){
-                    possibleTiles.addAll(((Knight) piece).getTilesToMove(this.pieceColorOnTile, attackOnly, this.enemyKingTile));
-                }
-                else if(piece instanceof Pawn){
-
-                    ArrayList<Integer> possiblePawnTiles = ((Pawn) piece).getTilesToMove(this.pieceColorOnTile, attackOnly, this.enemyKingTile, this.enPassantTile, -1);
-                    possibleTiles.addAll(possiblePawnTiles);
-
-                    for(int blockingTile : this.blockingTiles){
-                        if(this.isPieceOnTile(blockingTile)){
-                            if(this.getPieceOnTile(blockingTile) instanceof Pawn && Math.abs(this.enPassantTile - blockingTile) == 8) {
-                                for (int possiblePawnTile : possiblePawnTiles) {
-                                    if (possiblePawnTile == this.enPassantTile) {
-                                        legalMoves.add(possiblePawnTile);
-                                        break;
-                                    }
-                                }
-                            }
-                            break;
+                switch(piece & pieceMask){
+                    case pawnMask:
+                        if(enPassantTile >= 0 && ((Pawn.getTilesAttacked(position, whiteToMove) >> enPassantTile) & 1) == 1){
+                            possibleTiles |= (1L << enPassantTile);
                         }
-                    }
+                        else {
+                            possibleTiles |= Pawn.getTilesToMove(position, (whiteToMove ? blackPieces : whitePieces),
+                                    pieces, false, enemyKingTile, enPassantTile, 0, whiteToMove);
+                        }
+                        break;
+                    case bishopMask:
+                        possibleTiles |= Bishop.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces), pieces, false, enemyKingTile, 0);
+                        break;
+                    case knightMask:
+                        possibleTiles |= Knight.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces),
+                                (whiteToMove ? blackPieces : whitePieces), false, enemyKingTile);
+                        break;
+                    case rookMask:
+                        possibleTiles |= Rook.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces), pieces, false, enemyKingTile, 0);
+                        break;
+                    default:
+                        possibleTiles |= Queen.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces), pieces, false, enemyKingTile, 0);
+                        break;
                 }
 
-                for(int possibleTile : possibleTiles){
-                    if(this.blockingTiles.contains(possibleTile)){
-                        legalMoves.add(possibleTile);
-                    }
-                }
+                legalMoves |= (blockingTiles & possibleTiles);
             }
         }
-        else if(this.pinnedPieces.contains(piece.getPosition())){
+        else if(pinnedPieces[position] > 0){
 
-            int pinDirection = this.pinnedPiecesDirection.get(this.pinnedPieces.indexOf(piece.getPosition()));
-
-            if(piece instanceof Pawn){
-
-                legalMoves.addAll(((Pawn) piece).getTilesToMove(this.pieceColorOnTile, attackOnly, this.enemyKingTile, this.enPassantTile, pinDirection));
-            }
-            else if(piece instanceof Rook){
-
-                legalMoves.addAll(((Rook) piece).getTilesToMove(this.pieceColorOnTile, attackOnly, this.enemyKingTile, pinDirection));
-            }
-            else if(piece instanceof Bishop){
-
-                legalMoves.addAll(((Bishop) piece).getTilesToMove(this.pieceColorOnTile, attackOnly, this.enemyKingTile, pinDirection));
-            }
-            else if(piece instanceof Queen){
-
-                legalMoves.addAll(((Queen) piece).getTilesToMove(this.pieceColorOnTile, attackOnly, this.enemyKingTile, pinDirection));
+            switch(piece & pieceMask){
+                case pawnMask:
+                    legalMoves |= Pawn.getTilesToMove(position, (whiteToMove ? blackPieces : whitePieces),
+                                pieces, false, enemyKingTile, enPassantTile, pinnedPieces[position], whiteToMove);
+                    break;
+                case bishopMask:
+                    legalMoves |= Bishop.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces), pieces, attackOnly, enemyKingTile, pinnedPieces[position]);
+                    break;
+                case queenMask:
+                    legalMoves |= Queen.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces), pieces, attackOnly, enemyKingTile, pinnedPieces[position]);
+                    break;
+                case rookMask:
+                    legalMoves |= Rook.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces), pieces, attackOnly, enemyKingTile, pinnedPieces[position]);
+                    break;
             }
         }
         else{
-            if(piece instanceof King){
+            if((piece & pieceMask) == kingMask){
 
                 boolean[] canCastle = new boolean[]{false, false};
                 if(!attackOnly) {
-                    if (this.whiteToMove) {
-
-                        if (this.castleRights[0] && this.attackedByEnemy[61] == 0 && this.attackedByEnemy[62] == 0 &&
-                                !this.isPieceOnTile(61) && !this.isPieceOnTile(62)) {
+                    if (whiteToMove) {
+                        if (castleRights[0] && ((attackedByEnemy >> 61 & 1) == 0) && ((attackedByEnemy >> 62 & 1) == 0) &&
+                                ((pieces >> 61 & 1) == 0) && ((pieces >> 62 & 1) == 0)) {
                             canCastle[0] = true;
                         }
-                        if (this.castleRights[1] && this.attackedByEnemy[58] == 0 && this.attackedByEnemy[59] == 0 &&
-                                !this.isPieceOnTile(58) && !this.isPieceOnTile(59) && !this.isPieceOnTile(57)) {
+                        if (castleRights[1] && ((attackedByEnemy >> 58 & 1) == 0) && ((attackedByEnemy >> 59 & 1) == 0) &&
+                                ((pieces >> 58 & 1) == 0) && ((pieces >> 59 & 1) == 0) && ((pieces >> 57 & 1) == 0)) {
                             canCastle[1] = true;
                         }
-                    } else {
-                        if (this.castleRights[2] && this.attackedByEnemy[5] == 0 && this.attackedByEnemy[6] == 0 &&
-                                !this.isPieceOnTile(5) && !this.isPieceOnTile(6)) {
+                    }
+                    else {
+                        if (castleRights[2] && ((attackedByEnemy >> 5 & 1) == 0) && ((attackedByEnemy >> 6 & 1) == 0) &&
+                                ((pieces >> 5 & 1) == 0) && ((pieces >> 6 & 1) == 0)) {
                             canCastle[0] = true;
                         }
-                        if (this.castleRights[3] && this.attackedByEnemy[2] == 0 && this.attackedByEnemy[3] == 0 &&
-                                !this.isPieceOnTile(2) && !this.isPieceOnTile(3) && !this.isPieceOnTile(1)) {
+                        if (castleRights[3] && ((attackedByEnemy >> 2 & 1) == 0) && ((attackedByEnemy >> 3 & 1) == 0) &&
+                                ((pieces >> 1 & 1) == 0) && ((pieces >> 2 & 1) == 0) && ((pieces >> 3 & 1) == 0)) {
                             canCastle[1] = true;
                         }
                     }
                 }
 
-                for(int possibleTile : ((King) piece).getTilesToMove(this.pieceColorOnTile, attackOnly, canCastle)){
-                    if(this.attackedByEnemy[possibleTile] == 0){
-                        legalMoves.add(possibleTile);
-                    }
-                }
+                long possibleTiles = King.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces), (whiteToMove ? blackPieces : whitePieces), attackOnly, canCastle);
+                legalMoves |= (possibleTiles & (~attackedByEnemy));
             }
             else {
-                if(piece instanceof Pawn){
-                    ArrayList<Integer> possiblePawnTiles = ((Pawn) piece).getTilesToMove(this.pieceColorOnTile, attackOnly, this.enemyKingTile, this.enPassantTile, -1);
+                if((piece & pieceMask) == pawnMask){
+                    long possiblePawnTiles = Pawn.getTilesToMove(position, (whiteToMove ? blackPieces : whitePieces),
+                            pieces, attackOnly, enemyKingTile, enPassantTile, 0, whiteToMove);
 
-                    for(int x = 0; x < possiblePawnTiles.size(); x ++){
-                        if(possiblePawnTiles.get(x) == this.enPassantTile){
-
-                            int startTile = piece.getPosition();
-                            boolean isLegal = true;
-
-                            if(startTile % 8 < this.enPassantTile % 8){
-
-                                int checkingTile1 = startTile - 1;
-                                int checkingTile2 = startTile + 2;
-                                for(int i = startTile % 8 - 1; i >= 0; i --){
-                                    if(this.isPieceOnTile(checkingTile1)){
-                                        if(this.getEnemyHorizontalSliders().contains(checkingTile1)){
-                                            for(int j = startTile % 8 + 2; j < 8; j ++){
-                                                if(this.isPieceOnTile(checkingTile2)){
-                                                    if(checkingTile2 == this.myKingTile){
-                                                        isLegal = false;
-                                                    }
-                                                    break;
+                    if(((possiblePawnTiles >> enPassantTile) & 1) == 1){
+                        boolean isLegal = true;
+                        if(position % 8 < enPassantTile % 8){
+                            int checkingTile1 = position - 1;
+                            int checkingTile2 = position + 2;
+                            for(int i = position % 8 - 1; i >= 0; i --){
+                                if(((pieces >> checkingTile1) & 1) == 1){
+                                    if(((getEnemyHorizontalSliders() >> checkingTile1) & 1) == 1){
+                                        for(int j = position % 8 + 2; j < 8; j ++){
+                                            if(((pieces >> checkingTile2) & 1) == 1){
+                                                if(checkingTile2 == myKingTile){
+                                                    isLegal = false;
                                                 }
-                                                checkingTile2 ++;
+                                                break;
                                             }
+                                            checkingTile2 ++;
                                         }
-                                        else if(checkingTile1 == this.myKingTile){
-                                            for(int j = startTile % 8 + 2; j < 8; j ++){
-                                                if(this.isPieceOnTile(checkingTile2)){
-                                                    if(this.getEnemyHorizontalSliders().contains(checkingTile2)){
-                                                        isLegal = false;
-                                                    }
-                                                    break;
-                                                }
-                                                checkingTile2 ++;
-                                            }
-                                        }
-                                        break;
                                     }
-                                    checkingTile1 --;
-                                }
-                            }
-                            else{
-                                int checkingTile1 = startTile + 1;
-                                int checkingTile2 = startTile - 2;
-                                for(int i = startTile % 8 + 1; i < 8; i ++){
-                                    if(this.isPieceOnTile(checkingTile1)){
-                                        if(this.getEnemyHorizontalSliders().contains(checkingTile1)){
-                                            for(int j = startTile % 8 - 2; j >= 0; j --){
-                                                if(this.isPieceOnTile(checkingTile2)){
-                                                    if(checkingTile2 == this.myKingTile){
-                                                        isLegal = false;
-                                                    }
-                                                    break;
+                                    else if(checkingTile1 == myKingTile){
+                                        for(int j = position % 8 + 2; j < 8; j ++){
+                                            if(((pieces >> checkingTile2) & 1) == 1){
+                                                if(((getEnemyHorizontalSliders() >> checkingTile2) & 1) == 1){
+                                                    isLegal = false;
                                                 }
-                                                checkingTile2 --;
+                                                break;
                                             }
+                                            checkingTile2 ++;
                                         }
-                                        else if(checkingTile1 == this.myKingTile){
-                                            for(int j = startTile % 8 - 2; j >= 0; j --){
-                                                if(this.isPieceOnTile(checkingTile2)){
-                                                    if(this.getEnemyHorizontalSliders().contains(checkingTile2)){
-                                                        isLegal = false;
-                                                    }
-                                                    break;
-                                                }
-                                                checkingTile2 --;
-                                            }
-                                        }
-                                        break;
                                     }
-                                    checkingTile1 ++;
+                                    break;
                                 }
+                                checkingTile1 --;
                             }
-
-                            if(!isLegal){
-                                possiblePawnTiles.remove(x);
+                        }
+                        else{
+                            int checkingTile1 = position + 1;
+                            int checkingTile2 = position - 2;
+                            for(int i = position % 8 + 1; i < 8; i ++){
+                                if(((pieces >> checkingTile1) & 1) == 1){
+                                    if(((getEnemyHorizontalSliders() >> checkingTile1) & 1) == 1){
+                                        for(int j = position % 8 - 2; j >= 0; j --){
+                                            if(((pieces >> checkingTile2) & 1) == 1){
+                                                if(checkingTile2 == myKingTile){
+                                                    isLegal = false;
+                                                }
+                                                break;
+                                            }
+                                            checkingTile2 --;
+                                        }
+                                    }
+                                    else if(checkingTile1 == myKingTile){
+                                        for(int j = position % 8 - 2; j >= 0; j --){
+                                            if(((pieces >> checkingTile2) & 1) == 1){
+                                                if(((getEnemyHorizontalSliders() >> checkingTile2) & 1) == 1){
+                                                    isLegal = false;
+                                                }
+                                                break;
+                                            }
+                                            checkingTile2 --;
+                                        }
+                                    }
+                                    break;
+                                }
+                                checkingTile1 ++;
                             }
-
-                            break;
+                        }
+                        if(!isLegal){
+                            possiblePawnTiles ^= (1L << enPassantTile);
                         }
                     }
-
-                    legalMoves.addAll(possiblePawnTiles);
+                    legalMoves |= possiblePawnTiles;
                 }
-                else if(piece instanceof Rook){
-                    legalMoves.addAll(((Rook) piece).getTilesToMove(this.pieceColorOnTile, attackOnly, this.enemyKingTile, -1));
+                else if((piece & pieceMask) == rookMask){
+                    legalMoves |= Rook.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces), pieces, attackOnly, enemyKingTile, 0);
                 }
-                else if(piece instanceof Bishop){
-                    legalMoves.addAll(((Bishop) piece).getTilesToMove(this.pieceColorOnTile, attackOnly, this.enemyKingTile, -1));
+                else if((piece & pieceMask) == bishopMask){
+                    legalMoves |= Bishop.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces), pieces, attackOnly, enemyKingTile, 0);
                 }
-                else if(piece instanceof Knight){
-                    legalMoves.addAll(((Knight) piece).getTilesToMove(this.pieceColorOnTile, attackOnly, this.enemyKingTile));
+                else if((piece & pieceMask) == knightMask){
+                    legalMoves |= Knight.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces),
+                            (whiteToMove ? blackPieces : whitePieces), attackOnly, enemyKingTile);
                 }
-                else if(piece instanceof Queen){
-                    legalMoves.addAll(((Queen) piece).getTilesToMove(this.pieceColorOnTile, attackOnly, this.enemyKingTile, -1));
+                else if((piece & pieceMask) == queenMask){
+                    legalMoves |= Queen.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces), pieces, attackOnly, enemyKingTile, 0);
                 }
             }
         }
@@ -537,23 +514,28 @@ Board {
 
     public ArrayList<Move> generateAllLegalMoves(boolean attackOnly){
 
-        ArrayList<Move> allLegalMoves = new ArrayList<>();
+        ArrayList<Move> allMoves = new ArrayList<>();
 
-        for(Piece piece : (this.whiteToMove ? this.whitePieces : this.blackPieces)){
+        for(int i = 0; i < 64; i ++){
+            if((((whiteToMove ? whitePieces : blackPieces) >> i) & 1) == 1){
+                int piece = getPieceOnTile(i);
+                long moves = generateLegalMoves(piece, i, attackOnly);
 
-            for(int endTile : this.generateLegalMoves(piece, attackOnly)){
-
-                if(piece instanceof Pawn && (piece.isWhite() ? (endTile < 8) : (endTile > 55))){
-                    for(int i = 1; i < 5; i ++){
-                        allLegalMoves.add(this.createMove(piece.getPosition(), endTile, i));
+                for(int j = 0; j < 64; j ++){
+                    if(((moves >> j) & 1) == 1){
+                        if((piece & pieceMask) == pawnMask && (whiteToMove ? (j < 8) : (j > 55))){
+                            for(int k = 2; k < 6; k ++){
+                                allMoves.add(createMove(i, j, k));
+                            }
+                        }
+                        else{
+                            allMoves.add(createMove(i, j, 0));
+                        }
                     }
-                }
-                else {
-                    allLegalMoves.add(this.createMove(piece.getPosition(), endTile, 0));
                 }
             }
         }
-        return allLegalMoves;
+        return allMoves;
     }
 
     public Move createMove(int startPosition, int endPosition, int promotionNumber){
@@ -564,7 +546,7 @@ Board {
 
             int pieceTakenNum = 0;
             if(((pieces >> endPosition) & 1) == 1){
-                int pieceTaken = this.getPieceOnTile(endPosition);
+                int pieceTaken = getPieceOnTile(endPosition);
                 if((pieceTaken & pieceMask) == queenMask){
                     pieceTakenNum = queenMask;
                 }
@@ -579,7 +561,7 @@ Board {
                 }
             }
 
-            move = new PromotionMove(startPosition, endPosition, this.enPassantTile, this.castleRights, this.halfMoveCounter, promotionNumber, pieceTakenNum);
+            move = new PromotionMove(startPosition, endPosition, enPassantTile, castleRights, halfMoveCounter, promotionNumber, pieceTakenNum);
         }
         else if((((pawns >> startPosition) & 1) == 1) && enPassantTile == endPosition){
             move = new EnPassantMove(startPosition, endPosition, enPassantTile, castleRights, halfMoveCounter);
@@ -597,13 +579,13 @@ Board {
                 castleLocation = 1;
             }
 
-            move = new CastleMove(startPosition, endPosition, this.enPassantTile, this.castleRights, this.halfMoveCounter, castleLocation);
+            move = new CastleMove(startPosition, endPosition, enPassantTile, castleRights, halfMoveCounter, castleLocation);
         }
         else if(((pieces >> endPosition) & 1) == 1){
-            move = new AttackingMove(startPosition, endPosition, this.enPassantTile, this.castleRights, this.halfMoveCounter, this.getPieceOnTile(endPosition));
+            move = new AttackingMove(startPosition, endPosition, enPassantTile, castleRights, halfMoveCounter, getPieceOnTile(endPosition));
         }
         else{
-            move = new NormalMove(startPosition, endPosition, this.enPassantTile, this.castleRights, this.halfMoveCounter);
+            move = new NormalMove(startPosition, endPosition, enPassantTile, castleRights, halfMoveCounter);
         }
 
         return move;
@@ -613,179 +595,253 @@ Board {
 
         final int startPosition = move.getStartPosition();
         final int endPosition = move.getEndPosition();
+        final int pieceToMove = getPieceOnTile(startPosition);
 
-        final Piece pieceToMove = this.getPieceOnTile(startPosition);
-
-        if(pieceToMove instanceof King){
-            if(this.whiteToMove){
-                this.castleRights[0] = false;
-                this.castleRights[1] = false;
+        if((pieceToMove & pieceMask) == kingMask){
+            if(whiteToMove){
+                castleRights[0] = false;
+                castleRights[1] = false;
             }
             else{
-                this.castleRights[2] = false;
-                this.castleRights[3] = false;
+                castleRights[2] = false;
+                castleRights[3] = false;
             }
         }
 
         if(startPosition == 63 || endPosition == 63){
-            this.castleRights[0] = false;
+            castleRights[0] = false;
         }
-        else if(startPosition == 56 || endPosition == 56){
-            this.castleRights[1] = false;
+        if(startPosition == 56 || endPosition == 56){
+            castleRights[1] = false;
         }
-        else if(startPosition == 7 || endPosition == 7){
-            this.castleRights[2] = false;
+        if(startPosition == 7 || endPosition == 7){
+            castleRights[2] = false;
         }
-        else if(startPosition == 0 || endPosition == 0){
-            this.castleRights[3] = false;
+        if(startPosition == 0 || endPosition == 0){
+            castleRights[3] = false;
         }
 
         if(move instanceof NormalMove){
 
-            if(pieceToMove instanceof Pawn && Math.abs(endPosition - startPosition) == 16){
-                this.enPassantTile = (endPosition + startPosition) / 2;
+            if(((pieceToMove & pieceMask) == pawnMask) && Math.abs(endPosition - startPosition) == 16){
+                enPassantTile = (endPosition + startPosition) / 2;
             }
             else{
-                this.enPassantTile = -1;
+                enPassantTile = 64;
             }
 
-            pieceToMove.setPosition(endPosition);
+            long updater = (1L << startPosition) | (1L << endPosition);
+            pieces ^= updater;
+
+            if(whiteToMove){
+                whitePieces ^= updater;
+            }
+            else{
+                blackPieces ^= updater;
+            }
+
+            switch (pieceToMove & pieceMask){
+                case pawnMask:
+                    pawns ^= updater;
+                    break;
+                case bishopMask:
+                    bishops ^= updater;
+                    break;
+                case knightMask:
+                    knights ^= updater;
+                    break;
+                case rookMask:
+                    rooks ^= updater;
+                    break;
+                case queenMask:
+                    queens ^= updater;
+                    break;
+                default:
+                    kings ^= updater;
+                    break;
+            }
         }
         else if(move instanceof AttackingMove){
 
-            pieceToMove.setPosition(endPosition);
+            long startUpdater = 1L << startPosition;
+            long endUpdater = 1L << endPosition;
+            long updater = startUpdater | endUpdater;
+            pieces ^= startUpdater;
 
-            if(this.whiteToMove){
-                for(Piece piece : this.blackPieces){
-                    if(piece.getPosition() == endPosition){
-                        this.blackPieces.remove(piece);
-                        break;
-                    }
-                }
+            if(whiteToMove){
+                whitePieces ^= updater;
+                blackPieces ^= endUpdater;
             }
             else{
-                for(Piece piece : this.whitePieces){
-                    if(piece.getPosition() == endPosition){
-                        this.whitePieces.remove(piece);
-                        break;
-                    }
-                }
+                blackPieces ^= updater;
+                whitePieces ^= endUpdater;
             }
-            this.enPassantTile = -1;
+
+            switch (pieceToMove & pieceMask){
+                case pawnMask:
+                    pawns ^= updater;
+                    break;
+                case bishopMask:
+                    bishops ^= updater;
+                    break;
+                case knightMask:
+                    knights ^= updater;
+                    break;
+                case rookMask:
+                    rooks ^= updater;
+                    break;
+                case queenMask:
+                    queens ^= updater;
+                    break;
+                default:
+                    kings ^= updater;
+                    break;
+            }
+
+            switch (((AttackingMove) move).getTakenPiece() & pieceMask){
+                case pawnMask:
+                    pawns ^= endUpdater;
+                    break;
+                case bishopMask:
+                    bishops ^= endUpdater;
+                    break;
+                case knightMask:
+                    knights ^= endUpdater;
+                    break;
+                case rookMask:
+                    rooks ^= endUpdater;
+                    break;
+                default:
+                    queens ^= endUpdater;
+                    break;
+            }
+
+            this.enPassantTile = 64;
         }
         else if(move instanceof EnPassantMove){
 
-            pieceToMove.setPosition(endPosition);
+            long takingUpdater = (1L << startPosition) | (1L << endPosition);
+            long takenUpdater = (1L << (endPosition + (whiteToMove ? 8 : -8)));
+            long updater = takingUpdater | takenUpdater;
+            pieces ^= updater;
+            pawns ^= updater;
 
-            if(this.whiteToMove){
-                for(Piece piece : this.blackPieces){
-                    if(GameLogic.getRow(piece.getPosition()) == GameLogic.getRow(startPosition) && piece.getPosition() % 8 == endPosition % 8){
-                        this.blackPieces.remove(piece);
-                        break;
-                    }
-                }
+            if(whiteToMove){
+                whitePieces ^= takingUpdater;
+                blackPieces ^= takenUpdater;
             }
             else{
-                for(Piece piece : this.whitePieces){
-                    if(GameLogic.getRow(piece.getPosition()) == GameLogic.getRow(startPosition) && piece.getPosition() % 8 == endPosition % 8){
-                        this.whitePieces.remove(piece);
-                        break;
-                    }
-                }
+                blackPieces ^= takingUpdater;
+                whitePieces ^= takenUpdater;
             }
 
-            this.enPassantTile = -1;
+            enPassantTile = 64;
         }
         else if(move instanceof CastleMove){
 
             int direction = ((CastleMove) move).getCastleLocation();
 
-            pieceToMove.setPosition(endPosition);
+            long rookUpdater;
+            long kingUpdater;
 
             if(direction == 0){
-                this.getPieceOnTile(63).setPosition(61);
+                rookUpdater = (1L << 63 | 1L << 61);
+                kingUpdater = (1L << 60 | 1L << 62);
             }
             else if(direction == 1){
-                this.getPieceOnTile(56).setPosition(59);
+                rookUpdater = (1L << 56 | 1L << 59);
+                kingUpdater = (1L << 60 | 1L << 58);
             }
             else if(direction == 2){
-                this.getPieceOnTile(7).setPosition(5);
+                rookUpdater = (1L << 5 | 1L << 7);
+                kingUpdater = (1L << 4 | 1L << 6);
             }
             else{
-                this.getPieceOnTile(0).setPosition(3);
+                rookUpdater = (1L | 1L << 3);
+                kingUpdater = (1L << 4 | 1L << 2);
             }
 
-            this.enPassantTile = -1;
+            long updater = rookUpdater | kingUpdater;
+            pieces ^= updater;
+            rooks ^= rookUpdater;
+            kings ^= kingUpdater;
+
+            if(whiteToMove){
+                whitePieces ^= updater;
+            }
+            else{
+                blackPieces ^= updater;
+            }
+
+            enPassantTile = 64;
         }
         else if(move instanceof PromotionMove){
 
-            if(this.whiteToMove){
-                for(Piece piece : this.whitePieces){
-                    if(piece.getPosition() == startPosition){
-                        this.whitePieces.remove(piece);
-                        break;
-                    }
-                }
+            long pawnUpdater = 1L << startPosition;
+            long promotionPieceUpdater = 1L << endPosition;
+            long takenPieceUpdater = 1L << endPosition;
+            pawns ^= pawnUpdater;
+
+            final int pieceTaken = ((PromotionMove) move).getPieceTaken() & pieceMask;
+            if(pieceTaken == 0){
+                takenPieceUpdater = 0;
             }
             else{
-                for(Piece piece : this.blackPieces){
-                    if(piece.getPosition() == startPosition){
-                        this.blackPieces.remove(piece);
+                switch (pieceTaken){
+                    case rookMask:
+                        rooks ^= takenPieceUpdater;
                         break;
-                    }
+                    case knightMask:
+                        knights ^= takenPieceUpdater;
+                        break;
+                    case bishopMask:
+                        bishops ^= takenPieceUpdater;
+                        break;
+                    default:
+                        queens ^= takenPieceUpdater;
+                        break;
                 }
             }
 
-            int pieceTaken = ((PromotionMove) move).getPieceTaken();
-            if(pieceTaken >= 0){
-                if(this.whiteToMove){
-                    for(Piece piece : this.blackPieces){
-                        if(piece.getPosition() == endPosition){
-                            this.blackPieces.remove(piece);
-                            break;
-                        }
-                    }
-                }
-                else{
-                    for(Piece piece : this.whitePieces){
-                        if(piece.getPosition() == endPosition){
-                            this.whitePieces.remove(piece);
-                            break;
-                        }
-                    }
-                }
+            if(whiteToMove){
+                whitePieces ^= (pawnUpdater | promotionPieceUpdater);
+                blackPieces ^= takenPieceUpdater;
+            }
+            else{
+                blackPieces ^= (pawnUpdater | promotionPieceUpdater);
+                whitePieces ^= takenPieceUpdater;
             }
 
-            int promotionPieceNum = ((PromotionMove) move).getPromotionPieceNum();
-            switch (promotionPieceNum){
-                case 0:
-                    (this.whiteToMove ? this.whitePieces : this.blackPieces).add(new Queen(endPosition, this.whiteToMove));
+            switch (((PromotionMove) move).getPromotionPieceNum() & pieceMask){
+                case queenMask:
+                    queens ^= promotionPieceUpdater;
                     break;
-                case 1:
-                    (this.whiteToMove ? this.whitePieces : this.blackPieces).add(new Rook(endPosition, this.whiteToMove));
+                case knightMask:
+                    knights ^= promotionPieceUpdater;
                     break;
-                case 2:
-                    (this.whiteToMove ? this.whitePieces : this.blackPieces).add(new Knight(endPosition, this.whiteToMove));
+                case rookMask:
+                    rooks ^= promotionPieceUpdater;
                     break;
-                case 3:
-                    (this.whiteToMove ? this.whitePieces : this.blackPieces).add(new Bishop(endPosition, this.whiteToMove));
+                default:
+                    bishops ^= promotionPieceUpdater;
                     break;
             }
-            this.enPassantTile = -1;
+
+            enPassantTile = 64;
         }
 
-        if(move instanceof AttackingMove || pieceToMove instanceof Pawn){
-            this.halfMoveCounter = 0;
+        if(move instanceof AttackingMove || ((pieceToMove & pieceMask) == pawnMask)){
+            halfMoveCounter = 0;
         }
         else{
-            this.halfMoveCounter ++;
+            halfMoveCounter ++;
         }
 
         if(!this.whiteToMove){
-            this.fullMoveCounter ++;
+            fullMoveCounter ++;
         }
 
-        this.whiteToMove = !this.whiteToMove;
+        whiteToMove ^= true;
         updateEssentialVariables();
     }
 
@@ -793,136 +849,211 @@ Board {
 
         final int startPosition = move.getStartPosition();
         final int endPosition = move.getEndPosition();
-
-        final Piece pieceToUnMove = this.getPieceOnTile(endPosition);
+        final int pieceToUnMove = getPieceOnTile(endPosition);
 
         if(move instanceof NormalMove){
 
-            pieceToUnMove.setPosition(startPosition);
+            long updater = (1L << startPosition) | (1L << endPosition);
+            pieces ^= updater;
+
+            if(whiteToMove){
+                blackPieces ^= updater;
+            }
+            else{
+                whitePieces ^= updater;
+            }
+
+            switch (pieceToUnMove & pieceMask){
+                case pawnMask:
+                    pawns ^= updater;
+                    break;
+                case bishopMask:
+                    bishops ^= updater;
+                    break;
+                case knightMask:
+                    knights ^= updater;
+                    break;
+                case rookMask:
+                    rooks ^= updater;
+                    break;
+                case queenMask:
+                    queens ^= updater;
+                    break;
+                default:
+                    kings ^= updater;
+                    break;
+            }
         }
         else if(move instanceof AttackingMove){
 
-            pieceToUnMove.setPosition(startPosition);
+            long startUpdater = 1L << startPosition;
+            long endUpdater = 1L << endPosition;
+            long updater = startUpdater | endUpdater;
+            pieces ^= startUpdater;
 
-            if(!this.whiteToMove){
-
-                switch (((AttackingMove) move).getTakenPieceName()) {
-                    case "black_queen":
-                        this.blackPieces.add(new Queen(endPosition, false));
-                        break;
-                    case "black_rook":
-                        this.blackPieces.add(new Rook(endPosition, false));
-                        break;
-                    case "black_bishop":
-                        this.blackPieces.add(new Bishop(endPosition, false));
-                        break;
-                    case "black_knight":
-                        this.blackPieces.add(new Knight(endPosition, false));
-                        break;
-                    default:
-                        this.blackPieces.add(new Pawn(endPosition, false));
-                        break;
-                }
+            if(whiteToMove){
+                blackPieces ^= updater;
+                whitePieces ^= endUpdater;
             }
             else{
-                switch (((AttackingMove) move).getTakenPieceName()) {
-                    case "white_queen":
-                        this.whitePieces.add(new Queen(endPosition, true));
-                        break;
-                    case "white_rook":
-                        this.whitePieces.add(new Rook(endPosition, true));
-                        break;
-                    case "white_bishop":
-                        this.whitePieces.add(new Bishop(endPosition, true));
-                        break;
-                    case "white_knight":
-                        this.whitePieces.add(new Knight(endPosition, true));
-                        break;
-                    default:
-                        this.whitePieces.add(new Pawn(endPosition, true));
-                        break;
-                }
+                whitePieces ^= updater;
+                blackPieces ^= endUpdater;
+            }
+
+            switch (pieceToUnMove & pieceMask){
+                case pawnMask:
+                    pawns ^= updater;
+                    break;
+                case bishopMask:
+                    bishops ^= updater;
+                    break;
+                case knightMask:
+                    knights ^= updater;
+                    break;
+                case rookMask:
+                    rooks ^= updater;
+                    break;
+                case queenMask:
+                    queens ^= updater;
+                    break;
+                default:
+                    kings ^= updater;
+                    break;
+            }
+
+            switch (((AttackingMove) move).getTakenPiece() & pieceMask){
+                case pawnMask:
+                    pawns ^= endUpdater;
+                    break;
+                case bishopMask:
+                    bishops ^= endUpdater;
+                    break;
+                case knightMask:
+                    knights ^= endUpdater;
+                    break;
+                case rookMask:
+                    rooks ^= endUpdater;
+                    break;
+                default:
+                    queens ^= endUpdater;
+                    break;
             }
         }
         else if(move instanceof EnPassantMove){
 
-            pieceToUnMove.setPosition(startPosition);
+            long takingUpdater = (1L << startPosition) | (1L << endPosition);
+            long takenUpdater = (1L << (endPosition + (whiteToMove ? 8 : -8)));
+            long updater = takingUpdater | takenUpdater;
+            pieces ^= updater;
+            pawns ^= updater;
 
-            for(int i = 24; i < 40; i ++){
-                if(i % 8 == endPosition % 8 && GameLogic.getRow(i) == GameLogic.getRow(startPosition)){
-
-                    (this.whiteToMove ? this.whitePieces : this.blackPieces).add(new Pawn(i, this.whiteToMove));
-                }
+            if(whiteToMove){
+                blackPieces ^= takingUpdater;
+                whitePieces ^= takenUpdater;
+            }
+            else{
+                whitePieces ^= takingUpdater;
+                blackPieces ^= takenUpdater;
             }
         }
         else if(move instanceof CastleMove){
 
-            pieceToUnMove.setPosition(startPosition);
-
             int direction = ((CastleMove) move).getCastleLocation();
 
+            long rookUpdater;
+            long kingUpdater;
+
             if(direction == 0){
-                this.getPieceOnTile(61).setPosition(63);
+                rookUpdater = (1L << 63 | 1L << 61);
+                kingUpdater = (1L << 60 | 1L << 62);
             }
             else if(direction == 1){
-                this.getPieceOnTile(59).setPosition(56);
+                rookUpdater = (1L << 56 | 1L << 59);
+                kingUpdater = (1L << 60 | 1L << 58);
             }
             else if(direction == 2){
-                this.getPieceOnTile(5).setPosition(7);
+                rookUpdater = (1L << 5 | 1L << 7);
+                kingUpdater = (1L << 4 | 1L << 6);
             }
             else{
-                this.getPieceOnTile(3).setPosition(0);
+                rookUpdater = (1L | 1L << 3);
+                kingUpdater = (1L << 4 | 1L << 2);
+            }
+
+            long updater = rookUpdater | kingUpdater;
+            pieces ^= updater;
+            rooks ^= rookUpdater;
+            kings ^= kingUpdater;
+
+            if(whiteToMove){
+                blackPieces ^= updater;
+            }
+            else{
+                whitePieces ^= updater;
             }
         }
         else if(move instanceof PromotionMove){
 
-            (this.whiteToMove ? this.blackPieces : this.whitePieces).add(new Pawn(startPosition, !this.whiteToMove));
+            long pawnUpdater = 1L << startPosition;
+            long promotionPieceUpdater = 1L << endPosition;
+            long takenPieceUpdater = 1L << endPosition;
+            pawns ^= pawnUpdater;
 
-            if(this.whiteToMove){
-                for(Piece piece : this.blackPieces){
-                    if(piece.getPosition() == endPosition){
-                        this.blackPieces.remove(piece);
-                        break;
-                    }
-                }
+            final int pieceTaken = ((PromotionMove) move).getPieceTaken() & pieceMask;
+            if(pieceTaken == 0){
+                takenPieceUpdater = 0;
             }
             else{
-                for(Piece piece : this.whitePieces){
-                    if(piece.getPosition() == endPosition){
-                        this.whitePieces.remove(piece);
-                        break;
-                    }
-                }
-            }
-
-            int pieceTaken = ((PromotionMove) move).getPieceTaken();
-            if(pieceTaken >= 0){
                 switch (pieceTaken){
-                    case 0:
-                        (this.whiteToMove ? this.whitePieces : this.blackPieces).add(new Queen(endPosition, this.whiteToMove));
+                    case rookMask:
+                        rooks ^= takenPieceUpdater;
                         break;
-                    case 1:
-                        (this.whiteToMove ? this.whitePieces : this.blackPieces).add(new Rook(endPosition, this.whiteToMove));
+                    case knightMask:
+                        knights ^= takenPieceUpdater;
                         break;
-                    case 2:
-                        (this.whiteToMove ? this.whitePieces : this.blackPieces).add(new Knight(endPosition, this.whiteToMove));
+                    case bishopMask:
+                        bishops ^= takenPieceUpdater;
                         break;
-                    case 3:
-                        (this.whiteToMove ? this.whitePieces : this.blackPieces).add(new Bishop(endPosition, this.whiteToMove));
+                    default:
+                        queens ^= takenPieceUpdater;
                         break;
                 }
             }
+
+            if(whiteToMove){
+                blackPieces ^= (pawnUpdater | promotionPieceUpdater);
+                whitePieces ^= takenPieceUpdater;
+            }
+            else{
+                whitePieces ^= (pawnUpdater | promotionPieceUpdater);
+                blackPieces ^= takenPieceUpdater;
+            }
+
+            switch (((PromotionMove) move).getPromotionPieceNum() & pieceMask){
+                case queenMask:
+                    queens ^= promotionPieceUpdater;
+                    break;
+                case knightMask:
+                    knights ^= promotionPieceUpdater;
+                    break;
+                case rookMask:
+                    rooks ^= promotionPieceUpdater;
+                    break;
+                default:
+                    bishops ^= promotionPieceUpdater;
+                    break;
+            }
         }
 
-        this.setCastleRights(move.getPreviousCastleRights());
-        this.enPassantTile = move.getPreviousEnPassantTile();
-        this.halfMoveCounter = move.getPreviousHalfMoveCount();
+        setCastleRights(move.getPreviousCastleRights());
+        enPassantTile = move.getPreviousEnPassantTile();
+        halfMoveCounter = move.getPreviousHalfMoveCount();
 
-        if(this.whiteToMove){
-            this.fullMoveCounter --;
+        if(whiteToMove){
+            fullMoveCounter --;
         }
 
-        this.whiteToMove = !this.whiteToMove;
+        whiteToMove ^= true;
         updateEssentialVariables();
     }
 }

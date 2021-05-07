@@ -51,6 +51,4 @@ public abstract class Piece {
     public void printPiece(){
         System.out.print(getPieceName() + " on " + position + " (" + MainActivity.TILE_NAMES[position] + ")");
     }
-
-    public abstract ArrayList<Integer> getTilesAttacked(int startPosition, boolean isWhite, int[] pieceColorOnTile, int enemyKingTile);
 }
