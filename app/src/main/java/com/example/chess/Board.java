@@ -19,42 +19,38 @@ public class
 
 Board {
 
-    public long whitePieces;
-    public long blackPieces;
-    public long pieces;
-    public long kings;
-    public long queens;
-    public long rooks;
-    public long knights;
-    public long bishops;
-    public long pawns;
+    private long whitePieces;
+    private long blackPieces;
+    private long pieces;
+    private long kings;
+    private long queens;
+    private long rooks;
+    private long knights;
+    private long bishops;
+    private long pawns;
 
-    public static final int whiteMask = 16;
-    public static final int blackMask = 8;
-    public static final int colorMask = 24;
-    public static final int kingMask = 1;
-    public static final int queenMask = 2;
-    public static final int rookMask = 3;
-    public static final int knightMask = 4;
-    public static final int bishopMask = 5;
-    public static final int pawnMask = 6;
-    public static final int pieceMask = 7;
-
+    public static final int KING_MASK = 1;
+    public static final int QUEEN_MASK = 2;
+    public static final int ROOK_MASK = 3;
+    public static final int KNIGHT_MASK = 4;
+    public static final int BISHOP_MASK = 5;
+    public static final int PAWN_MASK = 6;
+    public static final int PIECE_MASK = 7;
 
 
     private boolean whiteToMove;
     private int enPassantTile;
-    private final boolean[] castleRights;
+    private int castleRights;
     private int fullMoveCounter;
     private int halfMoveCounter;
-    private final int[] attackedByMe = new int[64];
-    private final int[] attackedByEnemyOld = new int[64];
-    private final int[] attackedByEnemyPawn = new int[64];
-    private final int[] attackedByEnemyBishop = new int[64];
-    private final int[] attackedByEnemyKnight = new int[64];
-    private final int[] attackedByEnemyRook = new int[64];
-    private final int[] attackedByEnemyQueen = new int[64];
-    private final int[] attackedByEnemyKing = new int[64];
+//    private final int[] attackedByMe = new int[64];
+//    private final int[] attackedByEnemyOld = new int[64];
+//    private final int[] attackedByEnemyPawn = new int[64];
+//    private final int[] attackedByEnemyBishop = new int[64];
+//    private final int[] attackedByEnemyKnight = new int[64];
+//    private final int[] attackedByEnemyRook = new int[64];
+//    private final int[] attackedByEnemyQueen = new int[64];
+//    private final int[] attackedByEnemyKing = new int[64];
     private long attackedByEnemy;
     private int myKingTile;
     private int enemyKingTile;
@@ -65,7 +61,7 @@ Board {
     private final ArrayList<Integer> currentTargetSquares = new ArrayList<>();
     private int currentStartSquare = -1;
 
-    public Board(boolean whiteToMove, int enPassantTile, boolean[] castleRights, int halfMoveCounter, int fullMoveCounter,
+    public Board(boolean whiteToMove, int enPassantTile, int castleRights, int halfMoveCounter, int fullMoveCounter,
                  long whitePieces, long blackPieces, long kings, long queens, long rooks, long knights, long bishops, long pawns){
 
         this.whitePieces = whitePieces;
@@ -87,10 +83,6 @@ Board {
         updateEssentialVariables();
     }
 
-    public long getAttackedByEnemy(){
-        return attackedByEnemy;
-    }
-
     public long getWhitePieces(){
         return whitePieces;
     }
@@ -101,23 +93,6 @@ Board {
 
     public boolean isInCheck(){
         return inCheck;
-    }
-
-    public int getFullMoveCounter(){
-        return fullMoveCounter;
-    }
-
-    public int getHalfMoveCounter(){
-        return halfMoveCounter;
-    }
-
-    public int getMyKingTile(){
-        return myKingTile;
-    }
-
-    public void setCastleRights(boolean[] castleRights){
-
-        System.arraycopy(castleRights, 0, this.castleRights, 0, 4);
     }
 
     public ArrayList<Integer> getCurrentTargetSquares(){
@@ -158,48 +133,48 @@ Board {
         int piece = 0;
 
         if(((whitePieces >> tile) & 1) == 1){
-            piece |= whiteMask;
+            piece |= 0b10000;
         }
         else if(((blackPieces >> tile) & 1) == 1){
-            piece |= blackMask;
+            piece |= 0b01000;
         }
         else{
             return piece;
         }
 
         if(((pawns >> tile) & 1) == 1){
-            piece |= pawnMask;
+            piece |= PAWN_MASK;
         }
         else if(((bishops >> tile) & 1) == 1){
-            piece |= bishopMask;
+            piece |= BISHOP_MASK;
         }
         else if(((knights >> tile) & 1) == 1){
-            piece |= knightMask;
+            piece |= KNIGHT_MASK;
         }
         else if(((rooks >> tile) & 1) == 1){
-            piece |= rookMask;
+            piece |= ROOK_MASK;
         }
         else if(((queens >> tile) & 1) == 1){
-            piece |= queenMask;
+            piece |= QUEEN_MASK;
         }
         else {
-            piece |= kingMask;
+            piece |= KING_MASK;
         }
 
         return piece;
     }
 
     public long getTilesAttacked(int startPosition, int piece){
-        switch (piece & pieceMask){
-            case pawnMask:
+        switch (piece & PIECE_MASK){
+            case PAWN_MASK:
                 return Pawn.getTilesAttacked(startPosition, !whiteToMove);
-            case rookMask:
+            case ROOK_MASK:
                 return Rook.getTilesAttacked(startPosition, pieces, myKingTile);
-            case knightMask:
+            case KNIGHT_MASK:
                 return Knight.getTilesAttacked(startPosition);
-            case bishopMask:
+            case BISHOP_MASK:
                 return Bishop.getTilesAttacked(startPosition, pieces, myKingTile);
-            case queenMask:
+            case QUEEN_MASK:
                 return Queen.getTilesAttacked(startPosition, pieces, myKingTile);
             default:
                 return King.getTilesAttacked(startPosition);
@@ -264,7 +239,7 @@ Board {
                     }
                 }
                 if(checkMove){
-                    if((piece & pieceMask) == pawnMask || (piece & pieceMask) == knightMask){
+                    if((piece & PIECE_MASK) == PAWN_MASK || (piece & PIECE_MASK) == KNIGHT_MASK){
                         blockingTiles |= (1L << i);
                     }
                     else{
@@ -326,14 +301,14 @@ Board {
 
         if(this.inDoubleCheck){
 
-            if((piece & pieceMask) == kingMask){
+            if((piece & PIECE_MASK) == KING_MASK){
                 long possibleTiles = King.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces), (whiteToMove ? blackPieces : whitePieces), false, new boolean[]{false, false});
                 legalMoves |= (possibleTiles & (~attackedByEnemy));
             }
         }
         else if(this.inCheck){
 
-            if((piece & pieceMask) == kingMask){
+            if((piece & PIECE_MASK) == KING_MASK){
                 long possibleTiles = King.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces), (whiteToMove ? blackPieces : whitePieces), false, new boolean[]{false, false});
                 legalMoves |= (possibleTiles & (~attackedByEnemy));
             }
@@ -341,8 +316,8 @@ Board {
 
                 long possibleTiles = 0L;
 
-                switch(piece & pieceMask){
-                    case pawnMask:
+                switch(piece & PIECE_MASK){
+                    case PAWN_MASK:
                         if(enPassantTile >= 0 && ((Pawn.getTilesAttacked(position, whiteToMove) >> enPassantTile) & 1) == 1){
                             possibleTiles |= (1L << enPassantTile);
                         }
@@ -351,14 +326,14 @@ Board {
                                     pieces, false, enemyKingTile, enPassantTile, 0, whiteToMove);
                         }
                         break;
-                    case bishopMask:
+                    case BISHOP_MASK:
                         possibleTiles |= Bishop.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces), pieces, false, enemyKingTile, 0);
                         break;
-                    case knightMask:
+                    case KNIGHT_MASK:
                         possibleTiles |= Knight.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces),
                                 (whiteToMove ? blackPieces : whitePieces), false, enemyKingTile);
                         break;
-                    case rookMask:
+                    case ROOK_MASK:
                         possibleTiles |= Rook.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces), pieces, false, enemyKingTile, 0);
                         break;
                     default:
@@ -371,43 +346,43 @@ Board {
         }
         else if(pinnedPieces[position] > 0){
 
-            switch(piece & pieceMask){
-                case pawnMask:
+            switch(piece & PIECE_MASK){
+                case PAWN_MASK:
                     legalMoves |= Pawn.getTilesToMove(position, (whiteToMove ? blackPieces : whitePieces),
                                 pieces, false, enemyKingTile, enPassantTile, pinnedPieces[position], whiteToMove);
                     break;
-                case bishopMask:
+                case BISHOP_MASK:
                     legalMoves |= Bishop.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces), pieces, attackOnly, enemyKingTile, pinnedPieces[position]);
                     break;
-                case queenMask:
+                case QUEEN_MASK:
                     legalMoves |= Queen.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces), pieces, attackOnly, enemyKingTile, pinnedPieces[position]);
                     break;
-                case rookMask:
+                case ROOK_MASK:
                     legalMoves |= Rook.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces), pieces, attackOnly, enemyKingTile, pinnedPieces[position]);
                     break;
             }
         }
         else{
-            if((piece & pieceMask) == kingMask){
+            if((piece & PIECE_MASK) == KING_MASK){
 
                 boolean[] canCastle = new boolean[]{false, false};
                 if(!attackOnly) {
                     if (whiteToMove) {
-                        if (castleRights[0] && ((attackedByEnemy >> 61 & 1) == 0) && ((attackedByEnemy >> 62 & 1) == 0) &&
+                        if (((castleRights & 0b1000) >> 3 == 1) && ((attackedByEnemy >> 61 & 1) == 0) && ((attackedByEnemy >> 62 & 1) == 0) &&
                                 ((pieces >> 61 & 1) == 0) && ((pieces >> 62 & 1) == 0)) {
                             canCastle[0] = true;
                         }
-                        if (castleRights[1] && ((attackedByEnemy >> 58 & 1) == 0) && ((attackedByEnemy >> 59 & 1) == 0) &&
+                        if (((castleRights & 0b0100) >> 2 == 1) && ((attackedByEnemy >> 58 & 1) == 0) && ((attackedByEnemy >> 59 & 1) == 0) &&
                                 ((pieces >> 58 & 1) == 0) && ((pieces >> 59 & 1) == 0) && ((pieces >> 57 & 1) == 0)) {
                             canCastle[1] = true;
                         }
                     }
                     else {
-                        if (castleRights[2] && ((attackedByEnemy >> 5 & 1) == 0) && ((attackedByEnemy >> 6 & 1) == 0) &&
+                        if (((castleRights & 0b0010) >> 1 == 1) && ((attackedByEnemy >> 5 & 1) == 0) && ((attackedByEnemy >> 6 & 1) == 0) &&
                                 ((pieces >> 5 & 1) == 0) && ((pieces >> 6 & 1) == 0)) {
                             canCastle[0] = true;
                         }
-                        if (castleRights[3] && ((attackedByEnemy >> 2 & 1) == 0) && ((attackedByEnemy >> 3 & 1) == 0) &&
+                        if (((castleRights & 0b0001) == 1) && ((attackedByEnemy >> 2 & 1) == 0) && ((attackedByEnemy >> 3 & 1) == 0) &&
                                 ((pieces >> 1 & 1) == 0) && ((pieces >> 2 & 1) == 0) && ((pieces >> 3 & 1) == 0)) {
                             canCastle[1] = true;
                         }
@@ -418,7 +393,7 @@ Board {
                 legalMoves |= (possibleTiles & (~attackedByEnemy));
             }
             else {
-                if((piece & pieceMask) == pawnMask){
+                if((piece & PIECE_MASK) == PAWN_MASK){
                     long possiblePawnTiles = Pawn.getTilesToMove(position, (whiteToMove ? blackPieces : whitePieces),
                             pieces, attackOnly, enemyKingTile, enPassantTile, 0, whiteToMove);
 
@@ -494,17 +469,17 @@ Board {
                     }
                     legalMoves |= possiblePawnTiles;
                 }
-                else if((piece & pieceMask) == rookMask){
+                else if((piece & PIECE_MASK) == ROOK_MASK){
                     legalMoves |= Rook.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces), pieces, attackOnly, enemyKingTile, 0);
                 }
-                else if((piece & pieceMask) == bishopMask){
+                else if((piece & PIECE_MASK) == BISHOP_MASK){
                     legalMoves |= Bishop.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces), pieces, attackOnly, enemyKingTile, 0);
                 }
-                else if((piece & pieceMask) == knightMask){
+                else if((piece & PIECE_MASK) == KNIGHT_MASK){
                     legalMoves |= Knight.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces),
                             (whiteToMove ? blackPieces : whitePieces), attackOnly, enemyKingTile);
                 }
-                else if((piece & pieceMask) == queenMask){
+                else if((piece & PIECE_MASK) == QUEEN_MASK){
                     legalMoves |= Queen.getTilesToMove(position, (whiteToMove ? whitePieces : blackPieces), pieces, attackOnly, enemyKingTile, 0);
                 }
             }
@@ -523,7 +498,7 @@ Board {
 
                 for(int j = 0; j < 64; j ++){
                     if(((moves >> j) & 1) == 1){
-                        if((piece & pieceMask) == pawnMask && (whiteToMove ? (j < 8) : (j > 55))){
+                        if((piece & PIECE_MASK) == PAWN_MASK && (whiteToMove ? (j < 8) : (j > 55))){
                             for(int k = 2; k < 6; k ++){
                                 allMoves.add(createMove(i, j, k));
                             }
@@ -546,19 +521,7 @@ Board {
 
             int pieceTakenNum = 0;
             if(((pieces >> endPosition) & 1) == 1){
-                int pieceTaken = getPieceOnTile(endPosition);
-                if((pieceTaken & pieceMask) == queenMask){
-                    pieceTakenNum = queenMask;
-                }
-                else if((pieceTaken & pieceMask) == rookMask){
-                    pieceTakenNum = rookMask;
-                }
-                else if((pieceTaken & pieceMask) == knightMask){
-                    pieceTakenNum = knightMask;
-                }
-                else{
-                    pieceTakenNum = bishopMask;
-                }
+                pieceTakenNum = (getPieceOnTile(endPosition) & PIECE_MASK);
             }
 
             move = new PromotionMove(startPosition, endPosition, enPassantTile, castleRights, halfMoveCounter, promotionNumber, pieceTakenNum);
@@ -597,33 +560,31 @@ Board {
         final int endPosition = move.getEndPosition();
         final int pieceToMove = getPieceOnTile(startPosition);
 
-        if((pieceToMove & pieceMask) == kingMask){
+        if((pieceToMove & PIECE_MASK) == KING_MASK){
             if(whiteToMove){
-                castleRights[0] = false;
-                castleRights[1] = false;
+                castleRights &= 0b0011;
             }
             else{
-                castleRights[2] = false;
-                castleRights[3] = false;
+                castleRights &= 0b1100;
             }
         }
 
         if(startPosition == 63 || endPosition == 63){
-            castleRights[0] = false;
+            castleRights &= 0b0111;
         }
         if(startPosition == 56 || endPosition == 56){
-            castleRights[1] = false;
+            castleRights &= 0b1011;
         }
         if(startPosition == 7 || endPosition == 7){
-            castleRights[2] = false;
+            castleRights &= 0b1101;
         }
         if(startPosition == 0 || endPosition == 0){
-            castleRights[3] = false;
+            castleRights &= 0b1110;
         }
 
         if(move instanceof NormalMove){
 
-            if(((pieceToMove & pieceMask) == pawnMask) && Math.abs(endPosition - startPosition) == 16){
+            if(((pieceToMove & PIECE_MASK) == PAWN_MASK) && Math.abs(endPosition - startPosition) == 16){
                 enPassantTile = (endPosition + startPosition) / 2;
             }
             else{
@@ -640,20 +601,20 @@ Board {
                 blackPieces ^= updater;
             }
 
-            switch (pieceToMove & pieceMask){
-                case pawnMask:
+            switch (pieceToMove & PIECE_MASK){
+                case PAWN_MASK:
                     pawns ^= updater;
                     break;
-                case bishopMask:
+                case BISHOP_MASK:
                     bishops ^= updater;
                     break;
-                case knightMask:
+                case KNIGHT_MASK:
                     knights ^= updater;
                     break;
-                case rookMask:
+                case ROOK_MASK:
                     rooks ^= updater;
                     break;
-                case queenMask:
+                case QUEEN_MASK:
                     queens ^= updater;
                     break;
                 default:
@@ -677,20 +638,20 @@ Board {
                 whitePieces ^= endUpdater;
             }
 
-            switch (pieceToMove & pieceMask){
-                case pawnMask:
+            switch (pieceToMove & PIECE_MASK){
+                case PAWN_MASK:
                     pawns ^= updater;
                     break;
-                case bishopMask:
+                case BISHOP_MASK:
                     bishops ^= updater;
                     break;
-                case knightMask:
+                case KNIGHT_MASK:
                     knights ^= updater;
                     break;
-                case rookMask:
+                case ROOK_MASK:
                     rooks ^= updater;
                     break;
-                case queenMask:
+                case QUEEN_MASK:
                     queens ^= updater;
                     break;
                 default:
@@ -698,17 +659,17 @@ Board {
                     break;
             }
 
-            switch (((AttackingMove) move).getTakenPiece() & pieceMask){
-                case pawnMask:
+            switch (((AttackingMove) move).getTakenPiece() & PIECE_MASK){
+                case PAWN_MASK:
                     pawns ^= endUpdater;
                     break;
-                case bishopMask:
+                case BISHOP_MASK:
                     bishops ^= endUpdater;
                     break;
-                case knightMask:
+                case KNIGHT_MASK:
                     knights ^= endUpdater;
                     break;
-                case rookMask:
+                case ROOK_MASK:
                     rooks ^= endUpdater;
                     break;
                 default:
@@ -777,60 +738,65 @@ Board {
         }
         else if(move instanceof PromotionMove){
 
-            long pawnUpdater = 1L << startPosition;
-            long promotionPieceUpdater = 1L << endPosition;
-            long takenPieceUpdater = 1L << endPosition;
-            pawns ^= pawnUpdater;
+            long startUpdater = 1L << startPosition;
+            long endUpdater = 1L << endPosition;
+            long updater = startUpdater | endUpdater;
 
-            final int pieceTaken = ((PromotionMove) move).getPieceTaken() & pieceMask;
-            if(pieceTaken == 0){
-                takenPieceUpdater = 0;
-            }
-            else{
-                switch (pieceTaken){
-                    case rookMask:
-                        rooks ^= takenPieceUpdater;
-                        break;
-                    case knightMask:
-                        knights ^= takenPieceUpdater;
-                        break;
-                    case bishopMask:
-                        bishops ^= takenPieceUpdater;
-                        break;
-                    default:
-                        queens ^= takenPieceUpdater;
-                        break;
-                }
-            }
+            pawns ^= startUpdater;
+            pieces ^= startUpdater;
 
             if(whiteToMove){
-                whitePieces ^= (pawnUpdater | promotionPieceUpdater);
-                blackPieces ^= takenPieceUpdater;
+                whitePieces ^= updater;
+                blackPieces ^= endUpdater;
             }
             else{
-                blackPieces ^= (pawnUpdater | promotionPieceUpdater);
-                whitePieces ^= takenPieceUpdater;
+                blackPieces ^= updater;
+                whitePieces ^= endUpdater;
             }
 
-            switch (((PromotionMove) move).getPromotionPieceNum() & pieceMask){
-                case queenMask:
-                    queens ^= promotionPieceUpdater;
+            switch (((PromotionMove) move).getPieceTaken()){
+                case ROOK_MASK:
+                    rooks ^= endUpdater;
                     break;
-                case knightMask:
-                    knights ^= promotionPieceUpdater;
+                case KNIGHT_MASK:
+                    knights ^= endUpdater;
                     break;
-                case rookMask:
-                    rooks ^= promotionPieceUpdater;
+                case BISHOP_MASK:
+                    bishops ^= endUpdater;
+                    break;
+                case QUEEN_MASK:
+                    queens ^= endUpdater;
                     break;
                 default:
-                    bishops ^= promotionPieceUpdater;
+                    pieces ^= endUpdater;
+                    if(whiteToMove){
+                        blackPieces ^= endUpdater;
+                    }
+                    else{
+                        whitePieces ^= endUpdater;
+                    }
+                    break;
+            }
+
+            switch (((PromotionMove) move).getPromotionPieceNum()){
+                case QUEEN_MASK:
+                    queens ^= endUpdater;
+                    break;
+                case KNIGHT_MASK:
+                    knights ^= endUpdater;
+                    break;
+                case BISHOP_MASK:
+                    bishops ^= endUpdater;
+                    break;
+                default:
+                    rooks ^= endUpdater;
                     break;
             }
 
             enPassantTile = 64;
         }
 
-        if(move instanceof AttackingMove || ((pieceToMove & pieceMask) == pawnMask)){
+        if(move instanceof AttackingMove || ((pieceToMove & PIECE_MASK) == PAWN_MASK)){
             halfMoveCounter = 0;
         }
         else{
@@ -863,20 +829,20 @@ Board {
                 whitePieces ^= updater;
             }
 
-            switch (pieceToUnMove & pieceMask){
-                case pawnMask:
+            switch (pieceToUnMove & PIECE_MASK){
+                case PAWN_MASK:
                     pawns ^= updater;
                     break;
-                case bishopMask:
+                case BISHOP_MASK:
                     bishops ^= updater;
                     break;
-                case knightMask:
+                case KNIGHT_MASK:
                     knights ^= updater;
                     break;
-                case rookMask:
+                case ROOK_MASK:
                     rooks ^= updater;
                     break;
-                case queenMask:
+                case QUEEN_MASK:
                     queens ^= updater;
                     break;
                 default:
@@ -900,20 +866,20 @@ Board {
                 blackPieces ^= endUpdater;
             }
 
-            switch (pieceToUnMove & pieceMask){
-                case pawnMask:
+            switch (pieceToUnMove & PIECE_MASK){
+                case PAWN_MASK:
                     pawns ^= updater;
                     break;
-                case bishopMask:
+                case BISHOP_MASK:
                     bishops ^= updater;
                     break;
-                case knightMask:
+                case KNIGHT_MASK:
                     knights ^= updater;
                     break;
-                case rookMask:
+                case ROOK_MASK:
                     rooks ^= updater;
                     break;
-                case queenMask:
+                case QUEEN_MASK:
                     queens ^= updater;
                     break;
                 default:
@@ -921,17 +887,17 @@ Board {
                     break;
             }
 
-            switch (((AttackingMove) move).getTakenPiece() & pieceMask){
-                case pawnMask:
+            switch (((AttackingMove) move).getTakenPiece() & PIECE_MASK){
+                case PAWN_MASK:
                     pawns ^= endUpdater;
                     break;
-                case bishopMask:
+                case BISHOP_MASK:
                     bishops ^= endUpdater;
                     break;
-                case knightMask:
+                case KNIGHT_MASK:
                     knights ^= endUpdater;
                     break;
-                case rookMask:
+                case ROOK_MASK:
                     rooks ^= endUpdater;
                     break;
                 default:
@@ -994,58 +960,63 @@ Board {
         }
         else if(move instanceof PromotionMove){
 
-            long pawnUpdater = 1L << startPosition;
-            long promotionPieceUpdater = 1L << endPosition;
-            long takenPieceUpdater = 1L << endPosition;
-            pawns ^= pawnUpdater;
+            long startUpdater = 1L << startPosition;
+            long endUpdater = 1L << endPosition;
+            long updater = startUpdater | endUpdater;
 
-            final int pieceTaken = ((PromotionMove) move).getPieceTaken() & pieceMask;
-            if(pieceTaken == 0){
-                takenPieceUpdater = 0;
-            }
-            else{
-                switch (pieceTaken){
-                    case rookMask:
-                        rooks ^= takenPieceUpdater;
-                        break;
-                    case knightMask:
-                        knights ^= takenPieceUpdater;
-                        break;
-                    case bishopMask:
-                        bishops ^= takenPieceUpdater;
-                        break;
-                    default:
-                        queens ^= takenPieceUpdater;
-                        break;
-                }
-            }
+            pawns ^= startUpdater;
+            pieces ^= startUpdater;
 
             if(whiteToMove){
-                blackPieces ^= (pawnUpdater | promotionPieceUpdater);
-                whitePieces ^= takenPieceUpdater;
+                blackPieces ^= updater;
+                whitePieces ^= endUpdater;
             }
             else{
-                whitePieces ^= (pawnUpdater | promotionPieceUpdater);
-                blackPieces ^= takenPieceUpdater;
+                whitePieces ^= updater;
+                blackPieces ^= endUpdater;
             }
 
-            switch (((PromotionMove) move).getPromotionPieceNum() & pieceMask){
-                case queenMask:
-                    queens ^= promotionPieceUpdater;
+            switch (((PromotionMove) move).getPieceTaken()){
+                case ROOK_MASK:
+                    rooks ^= endUpdater;
                     break;
-                case knightMask:
-                    knights ^= promotionPieceUpdater;
+                case KNIGHT_MASK:
+                    knights ^= endUpdater;
                     break;
-                case rookMask:
-                    rooks ^= promotionPieceUpdater;
+                case BISHOP_MASK:
+                    bishops ^= endUpdater;
+                    break;
+                case QUEEN_MASK:
+                    queens ^= endUpdater;
                     break;
                 default:
-                    bishops ^= promotionPieceUpdater;
+                    pieces ^= endUpdater;
+                    if(whiteToMove){
+                        whitePieces ^= endUpdater;
+                    }
+                    else{
+                        blackPieces ^= endUpdater;
+                    }
+                    break;
+            }
+
+            switch (((PromotionMove) move).getPromotionPieceNum()){
+                case QUEEN_MASK:
+                    queens ^= endUpdater;
+                    break;
+                case KNIGHT_MASK:
+                    knights ^= endUpdater;
+                    break;
+                case BISHOP_MASK:
+                    bishops ^= endUpdater;
+                    break;
+                default:
+                    rooks ^= endUpdater;
                     break;
             }
         }
 
-        setCastleRights(move.getPreviousCastleRights());
+        castleRights = move.getPreviousCastleRights();
         enPassantTile = move.getPreviousEnPassantTile();
         halfMoveCounter = move.getPreviousHalfMoveCount();
 

@@ -2,8 +2,6 @@ package com.example.chess.pieces;
 
 import com.example.chess.GameLogic;
 
-import java.util.ArrayList;
-
 public class King extends Piece{
 
     public static final int[] MOVE_VECTORS = {-9, -8, -7, -1, 1, 7, 8, 9};

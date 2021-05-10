@@ -1,15 +1,5 @@
 package com.example.chess;
 
-import com.example.chess.pieces.Bishop;
-import com.example.chess.pieces.King;
-import com.example.chess.pieces.Knight;
-import com.example.chess.pieces.Pawn;
-import com.example.chess.pieces.Piece;
-import com.example.chess.pieces.Queen;
-import com.example.chess.pieces.Rook;
-
-import java.util.ArrayList;
-
 public class GameLogic {
 
     public final long[] masks = fillMasks();
@@ -61,8 +51,8 @@ public class GameLogic {
 
     public Board createBoardFromFEN(String fen){
 
-        long whitePieces2 = 0L;
-        long blackPieces2 = 0L;
+        long whitePieces = 0L;
+        long blackPieces = 0L;
         long kings = 0L;
         long queens = 0L;
         long rooks = 0L;
@@ -91,7 +81,7 @@ public class GameLogic {
 
                     if(!Character.isLowerCase(symbol)){
 
-                        whitePieces2 |= this.masks[tileCounter];
+                        whitePieces |= this.masks[tileCounter];
 
                         if(Character.toLowerCase(symbol) == 'r'){
                             rooks |= this.masks[tileCounter];
@@ -113,7 +103,7 @@ public class GameLogic {
                         }
                     }
                     else{
-                        blackPieces2 |= this.masks[tileCounter];
+                        blackPieces |= this.masks[tileCounter];
 
                         if(Character.toLowerCase(symbol) == 'r'){
                             rooks |= this.masks[tileCounter];
@@ -147,7 +137,7 @@ public class GameLogic {
         boolean whiteToMove = fen.charAt(indexNum) == 'w';
         indexNum += 2;
 
-        boolean[] castleRights = new boolean[]{false, false, false, false};
+        int castleRights = 0;
 
         if(fen.charAt(indexNum) == '-'){
             indexNum ++;
@@ -157,18 +147,18 @@ public class GameLogic {
 
                 if(Character.toLowerCase(fen.charAt(indexNum)) == 'k'){
                     if(Character.isUpperCase(fen.charAt(indexNum))){
-                        castleRights[0] = true;
+                        castleRights ^= 0b1000;
                     }
                     else{
-                        castleRights[2] = true;
+                        castleRights ^= 0b0010;
                     }
                 }
                 else{
                     if(Character.isUpperCase(fen.charAt(indexNum))){
-                        castleRights[1] = true;
+                        castleRights ^= 0b0100;
                     }
                     else{
-                        castleRights[3] = true;
+                        castleRights ^= 0b0001;
                     }
                 }
 
@@ -220,8 +210,8 @@ public class GameLogic {
             fullMoveCounter = Integer.parseInt(fullMoves);
         }
 
-        return new Board(whiteToMove,enPassantTile, castleRights, halfMoveCounter, fullMoveCounter, whitePieces2,
-                blackPieces2, kings, queens, rooks, knights, bishops, pawns);
+        return new Board(whiteToMove,enPassantTile, castleRights, halfMoveCounter, fullMoveCounter, whitePieces,
+                blackPieces, kings, queens, rooks, knights, bishops, pawns);
     }
 
     public static long getTilesToStopCheck(int kingPosition, int enemyPosition){

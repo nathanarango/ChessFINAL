@@ -10,6 +10,7 @@ import com.example.chess.moves.AttackingMove;
 import com.example.chess.moves.CastleMove;
 import com.example.chess.moves.EnPassantMove;
 import com.example.chess.moves.Move;
+import com.example.chess.moves.NormalMove;
 import com.example.chess.moves.PromotionMove;
 import com.example.chess.pieces.Pawn;
 import com.example.chess.pieces.Piece;
@@ -115,7 +116,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        this.currentBoard = logic.createStartBoard();
+        this.currentBoard = logic.createBoardFromFEN("r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R b KQkq a3 0 1");
         updateDisplay();
     }
 
@@ -125,7 +126,9 @@ public class MainActivity extends AppCompatActivity {
 
         int tileNum = Integer.parseInt(view.getTag().toString());
 
-        runSpeedTest(5, 4);
+        //runCountTest(1, true);
+
+        runBreakdownTest(2);
 
         //handleTilePress(tileNum);
     }
@@ -139,11 +142,15 @@ public class MainActivity extends AppCompatActivity {
 
             Move move = currentBoard.createMove(currentBoard.getCurrentStartSquare(), tileNum, isPromotion ? 2 : 0);
             currentBoard.makeMove(move);
+
 //            Search searcher = new Search(this.currentBoard);
 //            long startTime = System.currentTimeMillis();
 //            currentBoard.makeMove(searcher.findBestMove(2));
 //            long endTime = System.currentTimeMillis();
 //            displayText("Evaluations: " + searcher.counter + "   Time: " + String.valueOf(endTime - startTime));
+            if(currentBoard.generateAllLegalMoves(false).size() == 0){
+                displayText(currentBoard.isInCheck() ? (currentBoard.isWhiteToMove() ? "Black Wins" : "White Wins") : "Tie");
+            }
             updateDisplay();
         }
         else {
@@ -182,7 +189,7 @@ public class MainActivity extends AppCompatActivity {
 
             this.currentBoard.makeMove(move);
 
-            int count = positionCountTestBulk(depth - 1);
+            int count = positionCountTest(depth - 1);
             System.out.println(TILE_NAMES[move.getStartPosition()] + TILE_NAMES[move.getEndPosition()] + ": " + count);
             counter += count;
 
@@ -297,17 +304,20 @@ public class MainActivity extends AppCompatActivity {
 
     public int positionCountTestBulk(int depth){
 
-        ArrayList<Move> allLegalMoves = this.currentBoard.generateAllLegalMoves(false);
+        ArrayList<Move> allLegalMoves = currentBoard.generateAllLegalMoves(false);
         int numPositions = 0;
 
-        if(depth == 1){
+        if(depth == 0){
+            return 1;
+        }
+        else if(depth == 1){
             return allLegalMoves.size();
         }
 
         for(Move move : allLegalMoves){
-            this.currentBoard.makeMove(move);
+            currentBoard.makeMove(move);
             numPositions += positionCountTestBulk(depth - 1);
-            this.currentBoard.unMakeMove(move);
+            currentBoard.unMakeMove(move);
         }
         return numPositions;
     }
@@ -331,31 +341,31 @@ public class MainActivity extends AppCompatActivity {
 //                this.checkCounter ++;
 //            }
 
-            if(move instanceof AttackingMove){
-                this.attackMoveCounter ++;
-            }
-            else if(move instanceof CastleMove){
-                this.castleMoveCounter ++;
-            }
-            else if(move instanceof EnPassantMove){
-                this.enPassantCounter ++;
-                this.attackMoveCounter ++;
-            }
-            else if(move instanceof PromotionMove){
-                this.promotionMoveCounter ++;
-                if(((PromotionMove) move).getPieceTaken() >= 0){
-                    this.attackMoveCounter ++;
-                }
-            }
-
-            int testCounter = 0;
-//            TODO other test
-//            for(Piece piece : currentBoard.isWhiteToMove() ? currentBoard.getWhitePieces() : currentBoard.getBlackPieces()){
-//                testCounter += currentBoard.generateLegalMoves(piece, false).size();
+//            if(move instanceof AttackingMove){
+//                this.attackMoveCounter ++;
 //            }
-            if(testCounter == 0){
-                this.checkmateCounter++;
-            }
+//            else if(move instanceof CastleMove){
+//                this.castleMoveCounter ++;
+//            }
+//            else if(move instanceof EnPassantMove){
+//                this.enPassantCounter ++;
+//                this.attackMoveCounter ++;
+//            }
+//            else if(move instanceof PromotionMove){
+//                this.promotionMoveCounter ++;
+//                if(((PromotionMove) move).getPieceTaken() > 0){
+//                    this.attackMoveCounter ++;
+//                }
+//            }
+//
+//            int testCounter = 0;
+////            TODO other test
+////            for(Piece piece : currentBoard.isWhiteToMove() ? currentBoard.getWhitePieces() : currentBoard.getBlackPieces()){
+////                testCounter += currentBoard.generateLegalMoves(piece, false).size();
+////            }
+//            if(testCounter == 0){
+//                this.checkmateCounter++;
+//            }
 
             numPositions += positionCountTest(depth - 1);
 

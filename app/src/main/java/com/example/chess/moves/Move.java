@@ -5,19 +5,16 @@ public abstract class Move {
     private final int startPosition;
     private final int endPosition;
     private final int previousEnPassantTile;
-    private final boolean[] previousCastleRights = new boolean[]{false, false, false, false};
+    private final int previousCastleRights;
     private final int previousHalfMoveCount;
 
-    public Move(int startPosition, int endPosition, int previousEnPassantTile, boolean[] previousCastleRights, int previousHalfMoveCount) {
+    public Move(int startPosition, int endPosition, int previousEnPassantTile, int previousCastleRights, int previousHalfMoveCount) {
 
         this.startPosition = startPosition;
         this.endPosition = endPosition;
         this.previousEnPassantTile = previousEnPassantTile;
         this.previousHalfMoveCount = previousHalfMoveCount;
-
-        for(int i = 0; i < 4; i ++){
-            this.previousCastleRights[i] = previousCastleRights[i];
-        }
+        this.previousCastleRights = previousCastleRights;
     }
 
     public int getEndPosition(){
@@ -28,7 +25,7 @@ public abstract class Move {
         return startPosition;
     }
 
-    public boolean[] getPreviousCastleRights(){
+    public int getPreviousCastleRights(){
         return previousCastleRights;
     }
 
